@@ -24,7 +24,7 @@ var roleTransport = {
         else if(
             !creep.memory.transport &&
             
-            ((creep.store[RESOURCE_ENERGY] != 0 &&
+            ((creep.store.getFreeCapacity() == 0 && //was creep.store[RESOURCE_ENERGY] != 0
             (creep.room.name == creep.memory.homeRoom) ) ||
             
             (creep.store.getFreeCapacity() == 0 &&
@@ -113,7 +113,7 @@ var roleTransport = {
                 if(creep.room.name != targetRoom) {
                     var target = Game.getObjectById(creep.memory.target);
                     if(target)
-                        creep.travelTo(new RoomPosition(target.pos.x,target.pos.y,creep.memory.targetRoom), {range:4});
+                        creep.travelTo(new RoomPosition(target.pos.x,target.pos.y,creep.memory.targetRoom), {range:2});
                     else {
                         creep.travelTo(new RoomPosition(25,25,creep.memory.targetRoom), {range:10});//TOD test if range 23 works to just get to edge so rest of local logic will work
                     }
@@ -136,10 +136,10 @@ var roleTransport = {
             if(target) {
                 var result;
                 //this code starts to look for energy dropped by typically harvesters to pick it up, but swamps screws with 2 range because its slow to travel on them so parm is 4 range.
-                if(creep.pos.inRangeTo(target,4)) { //small swamps can screw up 2 range, so make it 4 before looking for dropped res
+                if(creep.pos.inRangeTo(target,1)) { //small swamps can screw up 2 range, so make it 4 before looking for dropped res
                     var source = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES);
                     
-                    if( source && creep.pos.inRangeTo(source,4) ) {
+                    if( source && creep.pos.inRangeTo(source,1) ) {
                         result = creep.pickup(source);
                         if( result == ERR_NOT_IN_RANGE) {
                             creep.travelTo(source, {ignoreCreeps: false,range:1,maxRooms:1});
@@ -154,26 +154,25 @@ var roleTransport = {
                 }
                 //if not within 4 range of source nor within range of dropped resources, move closer to target to get ready for pickup when it does drop resources
                 if( !targetIsDry ) {
-                    result = creep.travelTo(target, {ignoreCreeps: false,range:4,maxRooms:1}); //small swamps can screw up 2 range, so make it 4 before looking for dropped res
+                    result = creep.travelTo(target, {ignoreCreeps: false,range:1,maxRooms:1}); //small swamps can screw up 2 range, so make it 4 before looking for dropped res
                     return;
                 }
-                    // if(creep.name == 'c0.7974505138169041' )
-                    //     console.log(JSON.stringify(creep.));
                 
             }
 
             //if we get here, it means we don't have targetted hauling otherwise above code would have executed already. See if we can dynamically get a target assigned.
             if( !creep.memory.target ) {
-                var candidateTargets = _.filter( Memory.creeps,(harvesterCreep) => {
+                var candidateTargets = _.filter( Game.creeps,(harvesterCreep) => {
                     return harvesterCreep.memory.role == "harvester" &&
-                    roleHarvester.getTransportCoverage(harvesterCreep) < roleHarvester.getBaseRange(harvesterCreep)}
-                    );
+                    roleHarvester.getTransportCoverage(harvesterCreep) < roleHarvester.getBaseRange(harvesterCreep) &&
+                    !harvesterCreep.spawning});
 
                 if(candidateTargets[0]) {
                     //calculate transportcoverage and update the target harvester's coverage
                     let baseRange = roleHarvester.getBaseRange(candidateTargets[0]);
-                    let transportCoverage = this.calcTransportCoverage(creep,baseRange);
-                    roleHarvester.setTransportCoverage(candidateTargets[0],transportCoverage);                    
+                    let transportCoverage = this.calcTransportCoverage(creep,candidateTargets[0],baseRange);
+                    roleHarvester.setTransportCoverage(candidateTargets[0],transportCoverage);
+                    creep.memory.target = candidateTargets[0].id;
                 }
             }
             
@@ -212,19 +211,31 @@ var roleTransport = {
     
     //TODO need to be cognisant of road-coverage and transport type (plain vs roadster) to calculate this properly
     /** @param {Creep} transportCreep **/
+    /** @param {Creep} harvesterCreep **/
     /** @param {number} baseRange **/
-    calcTransportCoverage: function(transportCreep,baseRange) {
+    calcTransportCoverage: function(transportCreep,harvesterCreep,baseRange) {
         //calculate capacity based on max harvester utilization of unboosted normal energy node TODO - later to calc for midblock sources and boosted sources
-        let basicSourceMaxRate = 10;
+        //let basicSourceMaxRate = 10;
+
+        console.log(`Info: role.transport calcTransportCoverage transportCreep: ${transportCreep.id}`);
+
+        //count work modules on harvester
+        let harvesterParts = _.filter(harvesterCreep.body, function(b) {return b.type == WORK});
+        let basicSourceMaxRate = harvesterParts.length*2;
+
         //assume one step per tick and count both to and from travel. baseRange-2 because source+base positions don't count for distance,
         //transportRequirement is the amount of energy available for transport in the time a transport would take to go to base and come back
         let transportRequirement = baseRange * basicSourceMaxRate * 2; 
 
-        let transportParts = _.filter(transportCreep.body, (bodyPart) => {return bodyPart == CARRY});
+        console.log(`Info: role.transport calcTransportCoverage transportRequirement: ${transportRequirement}`);
+        
+        console.log(`Info: role.transport calcTransportCoverage transportCreep.body: ${JSON.stringify(transportCreep.body)}`);
 
-        console.log(`Info: role.transport calcTransportCoverage basicTransportCapacity: ${basicTransportCapacity}`);
+        let transportParts = _.filter(transportCreep.body, function(b) {return b.type == CARRY});
 
-        let transportCapacity = (transportParts * CARRY_CAPACITY); //CARRY_CAPACITY is typically 50 per CARRY
+        console.log(`Info: role.transport calcTransportCoverage transportParts length: ${transportParts.length}`);
+
+        let transportCapacity = (transportParts.length * CARRY_CAPACITY); //CARRY_CAPACITY is typically 50 per CARRY
         
         console.log(`Info: role.transport calcTransportCoverage transportCapacity: ${transportCapacity}`);
 
