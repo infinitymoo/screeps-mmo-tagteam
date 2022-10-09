@@ -52,8 +52,6 @@
         if( !Memory.rooms[Memory.homeRoom] ) {
             Memory.rooms[Memory.homeRoom] = {};
         }
-        console.log(`queueSpawn Memory.rooms ${JSON.stringify(Memory.rooms)}`);
-        console.log(`queueSpawn homeRoom ${JSON.stringify(Memory.homeRoom)}`);
         if( !Memory.rooms[Memory.homeRoom].spawnQueue ) {
             Memory.rooms[Memory.homeRoom].spawnQueue = []
         }

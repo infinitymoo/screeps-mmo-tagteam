@@ -55,10 +55,7 @@ module.exports.loop = function () {
         var creepAmount = 0;
         for(var i in Memory.creeps){creepAmount++};
         
-        if( creepAmount < 5 && Memory.rooms[Memory.homeRoom].spawnQueue.length < 1 ) {
-                
-            console.log('inside kickoff '+creepAmount+' spawnqueuelength '+Memory.rooms[Memory.homeRoom].spawnQueue.length);
-            
+        if( creepAmount < 5 && Memory.rooms[Memory.homeRoom].spawnQueue.length < 1 ) {            
             var sources = Game.rooms[Memory.homeRoom].find(FIND_SOURCES);
             //var sortedSources;
             //Game.rooms[Memory.homeRoom].pos.findClosestByRange(FIND_SOURCES);
