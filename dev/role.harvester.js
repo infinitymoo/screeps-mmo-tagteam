@@ -1,3 +1,5 @@
+var Traveler = require('Traveler');
+
 /** Limitations
  * 1 - TO TEST check to see what harvester does at every RCL / base development level with its behaviour to make sure its robust
  * 2 - must specify source in memory parms when spawning and is currently manual
@@ -56,10 +58,19 @@ var roleHarvester = {
 
             // 4
             
-            if( !wasRemoteRoom )
-                if(creep.harvest(source) == ERR_NOT_IN_RANGE) {
+            if( !wasRemoteRoom ) {
+                var result = creep.harvest(source);
+                if(result == ERR_NOT_IN_RANGE) {
                     creep.travelTo(source, {visualizePathStyle: {stroke: '#ffaa00'}});
                 }
+                else if(result == OK) {
+
+                    if( !creep.memory.baseRange ) {
+                        creep.memory.baseRange = this.getBaseRange(creep);
+                        creep.memory.transportCoverage = this.getTransportCoverage(creep);
+                    }
+                }
+            }
             
         }
         // 5
@@ -123,6 +134,73 @@ var roleHarvester = {
                 
             }
         }
+    },
+
+    /** @param {Creep} creep **/
+    getBaseRange: function(creep) {
+
+        if( creep.memory.baseRange && creep.memory.baseRange > 1 ){
+            return creep.memory.baseRange;
+        }
+      
+        //if not already set and sent like above shows, let's calculate it
+        var baseTarget = Game.rooms[creep.memory.homeRoom].find(FIND_STRUCTURES, {
+            filter: (structure) => {
+                return (structure.structureType == STRUCTURE_STORAGE ||
+                    structure.structureType == STRUCTURE_SPAWN);
+            }
+        });
+        if( !baseTarget[0] ) {
+            throw ("Exception thrown: harvester can't find baseTarget for setting transport links up");
+        }
+
+        //harvester's source position won't be accessible if we have no vision in room, so have to handle that scenario.
+        let creepSourcePos = false;
+        try {
+            if(creep.memory.source.pos instanceof RoomPosition) {
+                creepSourcePos = creep.memory.source.pos;
+            }
+        }
+        catch(e) {
+            console.log("Exception thrown: harvester getBaseRange can't get creep's source position probably because its blind. Returning -1");
+            return -1;
+        }
+
+        if(creepSourcePos) {
+            var path = Traveler.findTravelPath(creepSourcePos, baseTarget[0].pos);
+            if(!path.length || path.length == 0) {
+                throw ("Exception thrown: role.harvester getBaseRange() can't find valid path length to base for setting transport links up: path object from Traveler is "+JSON.stringify(path));
+            }
+            creep.memory.baseRange = path.length - 1; //need to -1 because distance is to object not to space next to it whcih is all we need.
+        }
+        else {
+            console.log("Logic issue: role.harvester getBaseRange() can't get creep's source position probably because its blind: creepSourcePos: "+JSON.stringify(creepSourcePos));
+            console.log("creep.memory.source.pos: "+JSON.stringify(creep.memory.source.pos));
+            return -1;
+        }
+
+        //if we're only getting the baseRange now, it means we have no transportCoverage yet either.
+        creep.memory.transportCoverage = 0;
+
+        //we'll only get here if its first time we set it up so let's return it then
+        return creep.memory.baseRange;
+    },
+
+    /** @param {Creep} creep **/
+    getTransportCoverage: function(creep) {
+        if( !creep.memory.transportCoverage ){
+            creep.memory.transportCoverage = 0;
+        }
+        return creep.memory.transportCoverage;
+    },
+
+    /** @param {Creep} creep **/
+    /** @param {number} transportCoverage **/
+    setTransportCoverage: function(creep,transportCoverage) {
+        if( !creep.memory.transportCoverage ){
+            creep.memory.transportCoverage = 0;
+        }
+        creep.memory.transportCoverage += transportCoverage;
     }
 };
 

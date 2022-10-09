@@ -196,6 +196,11 @@ module.exports.loop = function () {
 // 
 
 /**
+ * Base Development Code Goals
+ * 1 - Spawn Container, extension placement, and fast-filler code
+ */
+
+/**
  * Limitations to deal with asap
  * 
  * 1 - TO TEST - Hardcoded and Manual attributes that behaviour depends on incl spawner 800 level
@@ -203,12 +208,12 @@ module.exports.loop = function () {
  * 3 - Fall-back behaviour for roles that are too dependent on developed bases or areas
  * 4 - Basic Defense of main room
  * 5 - Automatic handling of raiders in remote rooms and prioritizing spawning of attacker to deal with it first
- * 
+ * 6 - Don't call variables in memory directly from roles etc. but rather implement statemachine that can ensure they're initialized and valid before being accessed.
+ * 7 - assuming some values e.g. carry capacity for calculations updated already but should use constants not hard values to make code reusable for different worlds
  *  */ 
 
 // IDEAS
 // calculator util to optimize planning and decision-making of objects and actions in the game
-
 
 // warden system - each room has warden object that links like network to base through each other and keeps logic for handling threats and intel
 // - remembering hostile position when blinded
