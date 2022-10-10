@@ -21,6 +21,9 @@
             if(spawnParms) {
                 
                     delete spawnParms.memory._trav;
+                    if(spawnParms.memory.baseRange) { delete spawnParms.memory.baseRange }
+                    if(spawnParms.memory.transportCoverage) { delete spawnParms.memory.transportCoverage }
+                    if(spawnParms.memory.role == "transport") { delete spawnParms.memory.target }
 
                     let body = this.getBody(spawnParms);                        
                     
