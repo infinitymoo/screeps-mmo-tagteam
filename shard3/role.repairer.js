@@ -1,3 +1,5 @@
+var taskCommon = require('task.common');
+
 var roleRepairer = {
 
     /** @param {Creep} creep **/

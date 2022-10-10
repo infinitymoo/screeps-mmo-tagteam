@@ -1,4 +1,4 @@
-const taskCommon = require("./task.common");
+var taskCommon = require('task.common');
 
 var roleBuilder = {
 

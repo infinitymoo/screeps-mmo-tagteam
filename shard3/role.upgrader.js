@@ -1,3 +1,5 @@
+var taskCommon = require('task.common');
+
 /* Summary Behaviour
 
 ** 1 - If upgrading behaviour state = true and energy is dry, switch to harvest mode by setting upgrading state = false
