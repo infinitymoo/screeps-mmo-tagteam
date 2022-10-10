@@ -209,6 +209,7 @@ class Traveler {
      * @param options
      * @returns {PathfinderReturn}
      */
+    
     static findTravelPath(origin, destination, options = {}) {
         _.defaults(options, {
             ignoreCreeps: true,

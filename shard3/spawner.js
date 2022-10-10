@@ -36,7 +36,7 @@
                     if( result < 0 )
                     {
                         Memory.rooms[thisRoom].spawnQueue.push(spawnParms); //not sure if this patch is needed, thought i had another bug
-                        new RoomVisual(spawn.room.name).text("🚧 "+(result),spawn.pos.x,spawn.pos.y+2);
+                        //new RoomVisual(spawn.room.name).text("🚧 "+(result),spawn.pos.x,spawn.pos.y+2);
                     }
                         
             }
@@ -88,7 +88,7 @@
                         return creep.memory.role == "harvester"
                     });
 
-                    if( harvesters && harvesters.length > 1 ) {
+                    if( harvesters && harvesters.length > 0 ) {
                         //default
                         body = [WORK,WORK,CARRY,MOVE];
                     }
@@ -136,7 +136,7 @@
                     //static miner
                     // body = [WORK,WORK,CARRY,MOVE];
                     //default
-                    body = [WORK,WORK,WORK,WORK,CARRY,MOVE,MOVE];
+                    body = [WORK,WORK,WORK,CARRY,MOVE,MOVE];
                 }
                 if( spawnParms.memory.role == "transport" ){
                     //TODO manage with state machine so i won't have to calc every time

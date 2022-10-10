@@ -209,6 +209,7 @@ class Traveler {
      * @param options
      * @returns {PathfinderReturn}
      */
+    
     static findTravelPath(origin, destination, options = {}) {
         _.defaults(options, {
             ignoreCreeps: true,
@@ -583,4 +584,7 @@ const STATE_DEST_ROOMNAME = 6;
 // assigns a function to Creep.prototype: creep.travelTo(destination)
 Creep.prototype.travelTo = function (destination, options) {
     return Traveler.travelTo(this, destination, options);
+};
+Creep.prototype.findTravelPath = function (origin, destination, options = {}) {
+    return Traveler.findTravelPath(origin, destination, options = {});
 };

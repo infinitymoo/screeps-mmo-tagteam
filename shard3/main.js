@@ -58,12 +58,16 @@ module.exports.loop = function () {
         if( creepAmount < 5 && Memory.rooms[Memory.homeRoom].spawnQueue.length < 1 ) {            
             var sources = Game.rooms[Memory.homeRoom].find(FIND_SOURCES);
             //var sortedSources;
-            //Game.rooms[Memory.homeRoom].pos.findClosestByRange(FIND_SOURCES);
-            //
-            spawner.queueSpawn({memory:{role:'harvester',source:sources[0].id}});
-            spawner.queueSpawn({memory:{role:'transport'}});
+            var startSpawn;
+            for(var s in Game.spawns ) {
+                startSpawn = s;
+            }
+            var closestSource = Game.spawns[startSpawn].pos.findClosestByPath(FIND_SOURCES);
+            
+            spawner.queueSpawn({memory:{role:'harvester',source:closestSource.id}});
             spawner.queueSpawn({memory:{role:'transport'}});
             spawner.queueSpawn({memory:{role:'harvester',source:sources[1].id}});
+            spawner.queueSpawn({memory:{role:'transport'}});
             spawner.queueSpawn({memory:{role:'transport'}});
             spawner.queueSpawn({memory:{role:'harvester',source:sources[0].id}});                                                                                                                     
             spawner.queueSpawn({memory:{role:'harvester',source:sources[1].id}});
@@ -132,40 +136,43 @@ module.exports.loop = function () {
     
         for(var name in Game.creeps) {
             var creep = Game.creeps[name];
+
+            if(!creep.spawning) {
     
-            // homeRoom here used to be commented out and can be found on spawner code.
-            if(!creep.memory.homeRoom) {
-                creep.memory.homeRoom = Memory.homeRoom;            
-            }
-    
-            if(creep.memory.role == 'harvester') {
-                roleHarvester.run(creep);
-            }
-            if(creep.memory.role == 'upgrader') {
-                roleUpgrader.run(creep);
-            }
-            if(creep.memory.role == 'builder') {
-                roleBuilder.run(creep);
-            }
-            if(creep.memory.role == 'transport') {
-                roleTransport.run(creep);
-            }
-            if(creep.memory.role == 'repairer') {
-                roleRepairer.run(creep);
-            }
-            if(creep.memory.role == 'attacker') {
-                roleAttacker.run(creep);
-            }
-            if(creep.memory.role == 'refiller') {
-                roleRefiller.run(creep);
-            }
-            if(creep.memory.role == 'claimer') {
-                roleClaimer.run(creep);
+                // homeRoom here used to be commented out and can be found on spawner code.
+                if(!creep.memory.homeRoom) {
+                    creep.memory.homeRoom = Memory.homeRoom;            
+                }
+        
+                if(creep.memory.role == 'harvester') {
+                    roleHarvester.run(creep);
+                }
+                if(creep.memory.role == 'upgrader') {
+                    roleUpgrader.run(creep);
+                }
+                if(creep.memory.role == 'builder') {
+                    roleBuilder.run(creep);
+                }
+                if(creep.memory.role == 'transport') {
+                    roleTransport.run(creep);
+                }
+                if(creep.memory.role == 'repairer') {
+                    roleRepairer.run(creep);
+                }
+                if(creep.memory.role == 'attacker') {
+                    roleAttacker.run(creep);
+                }
+                if(creep.memory.role == 'refiller') {
+                    roleRefiller.run(creep);
+                }
+                if(creep.memory.role == 'claimer') {
+                    roleClaimer.run(creep);
+                }
             }
         }
     }
     catch( problem ) {
-        console.log(`main loop process runner section: ${problem}`);
+        console.log(`Exception thrown main loop process runner section: ${problem.name}: ${problem.message} ${problem.stack}  `);
     }
     
     // if(Game.rooms['W26N57'].controller.level == 5) {
@@ -196,6 +203,11 @@ module.exports.loop = function () {
 // 
 
 /**
+ * Base Development Code Goals
+ * 1 - Spawn Container, extension placement, and fast-filler code
+ */
+
+/**
  * Limitations to deal with asap
  * 
  * 1 - TO TEST - Hardcoded and Manual attributes that behaviour depends on incl spawner 800 level
@@ -203,12 +215,12 @@ module.exports.loop = function () {
  * 3 - Fall-back behaviour for roles that are too dependent on developed bases or areas
  * 4 - Basic Defense of main room
  * 5 - Automatic handling of raiders in remote rooms and prioritizing spawning of attacker to deal with it first
- * 
+ * 6 - Don't call variables in memory directly from roles etc. but rather implement statemachine that can ensure they're initialized and valid before being accessed.
+ * 7 - assuming some values e.g. carry capacity for calculations updated already but should use constants not hard values to make code reusable for different worlds
  *  */ 
 
 // IDEAS
 // calculator util to optimize planning and decision-making of objects and actions in the game
-
 
 // warden system - each room has warden object that links like network to base through each other and keeps logic for handling threats and intel
 // - remembering hostile position when blinded
