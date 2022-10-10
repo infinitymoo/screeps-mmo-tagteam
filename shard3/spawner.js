@@ -77,7 +77,7 @@
             let body = [];
             //each if will catch and return early so rest shouldn't trigger until room is big enough for them
             //RCL 1
-            if(capacity <= 300) {
+            if(capacity <= 500) {
                 if( spawnParms.memory.role == "harvester" ){
                     //static miner
                     // body = [WORK,WORK,CARRY,MOVE];
@@ -131,7 +131,7 @@
                 return body;
             }
             //RCL 2
-            if(capacity = 550) {
+            if(capacity <= 750) {
                 if( spawnParms.memory.role == "harvester" ){
                     //static miner
                     // body = [WORK,WORK,CARRY,MOVE];
@@ -173,7 +173,7 @@
 
             }
             //RCL 3
-            if(capacity = 800) {
+            if(capacity <= 1250) {
                 if( spawnParms.memory.role == "harvester" ){
                     //static miner
                     // body = [WORK,WORK,CARRY,MOVE];
@@ -215,7 +215,7 @@
 
             }
             //RCL 4
-            if(capacity = 1300) {
+            if(capacity <= 1750) {
                 if( spawnParms.memory.role == "harvester" ){
                     //default
                     body = [WORK,WORK,WORK,WORK,WORK,CARRY,MOVE,MOVE,MOVE];
