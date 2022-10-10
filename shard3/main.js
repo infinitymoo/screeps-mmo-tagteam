@@ -6,6 +6,7 @@ var roleRepairer = require('role.repairer');
 var roleAttacker = require('role.attacker');
 var roleRefiller = require('role.refiller');
 var roleClaimer = require('role.claimer');
+var roleBreaker = require('role.breaker');
 var Traveler = require('Traveler');
 var spawner = require('spawner');
 
@@ -97,36 +98,36 @@ module.exports.loop = function () {
                     tower.attack(closestHostile)
                 })
             }
-            // else {
-            //     var closestDamagedStructure = towers[0].pos.findClosestByRange(FIND_STRUCTURES, {
-            //         filter: (structure) =>
-            //             (structure.hits < structure.hitsMax) && 
-            //             (structure.structureType != STRUCTURE_WALL) &&
-            //             structure.hits < 1000000
-            //         });
-            //     if(closestDamagedStructure) {
-            //         _.forEach(towers, (tower) => {
-            //             tower.repair(closestDamagedStructure);
-            //         })
-            //     }
-            //     else {
-            //         closestDamagedStructure = towers[0].pos.findClosestByRange(FIND_STRUCTURES, {
-            //             filter: (structure) =>
-            //                 (structure.hits < structure.hitsMax) && 
-            //                 (structure.structureType != STRUCTURE_WALL) &&
-            //                 structure.hits < 2000000
-            //             });
-            //         if(closestDamagedStructure) {
-            //             _.forEach(towers, (tower) => {
-            //                 tower.repair(closestDamagedStructure);
-            //             })
-            //     }
-            //     }
-            // }
+            else {
+                var closestDamagedStructure = towers[0].pos.findClosestByRange(FIND_STRUCTURES, {
+                    filter: (structure) =>
+                        (structure.hits < structure.hitsMax) && 
+                        (structure.structureType != STRUCTURE_WALL) &&
+                        structure.hits < 1000000
+                    });
+                if(closestDamagedStructure) {
+                    _.forEach(towers, (tower) => {
+                        tower.repair(closestDamagedStructure);
+                    })
+                }
+                else {
+                    closestDamagedStructure = towers[0].pos.findClosestByRange(FIND_STRUCTURES, {
+                        filter: (structure) =>
+                            (structure.hits < structure.hitsMax) && 
+                            (structure.structureType != STRUCTURE_WALL) &&
+                            structure.hits < 2000000
+                        });
+                    if(closestDamagedStructure) {
+                        _.forEach(towers, (tower) => {
+                            tower.repair(closestDamagedStructure);
+                        })
+                }
+                }
+            }
         }
     }
     catch( problem ) {
-        console.log(`main loop tower logic: ${problem}`);
+        console.log(`Exception thrown: main loop tower logic: ${problem.name}:${problem.message} ${problem.stack}`);
     }
     
     try {
@@ -167,6 +168,9 @@ module.exports.loop = function () {
                 }
                 if(creep.memory.role == 'claimer') {
                     roleClaimer.run(creep);
+                }
+                if(creep.memory.role == 'breaker') {
+                    roleBreaker.run(creep);
                 }
             }
         }

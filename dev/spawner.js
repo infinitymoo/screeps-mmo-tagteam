@@ -131,7 +131,7 @@
                 return body;
             }
             //RCL 2
-            if(capacity <= 550) {
+            if(capacity = 550) {
                 if( spawnParms.memory.role == "harvester" ){
                     //static miner
                     // body = [WORK,WORK,CARRY,MOVE];
@@ -173,7 +173,7 @@
 
             }
             //RCL 3
-            if(capacity <= 800) {
+            if(capacity = 800) {
                 if( spawnParms.memory.role == "harvester" ){
                     //static miner
                     // body = [WORK,WORK,CARRY,MOVE];
@@ -215,7 +215,7 @@
 
             }
             //RCL 4
-            if(capacity <= 1300) {
+            if(capacity = 1300) {
                 if( spawnParms.memory.role == "harvester" ){
                     //default
                     body = [WORK,WORK,WORK,WORK,WORK,CARRY,MOVE,MOVE,MOVE];
@@ -257,19 +257,19 @@
                 return body;
             }
             //RCL 5
-            if(capacity <= 1800) {
+            if(capacity = 1800) {
 
             }
             //RCL 6
-            if(capacity <= 2300) {
+            if(capacity = 2300) {
 
             }
             //RCL 7
-            if(capacity <= 5600) {
+            if(capacity = 5600) {
 
             }
             //RCL 8
-            if(capacity <= 13000) {
+            if(capacity = 13000) {
 
             }
 
