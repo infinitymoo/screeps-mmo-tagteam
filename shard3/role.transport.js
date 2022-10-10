@@ -47,6 +47,7 @@ var roleTransport = {
                     return (structure.structureType == STRUCTURE_EXTENSION ||
                         structure.structureType == STRUCTURE_SPAWN ||
                         structure.structureType == STRUCTURE_TOWER ||
+                        structure.structureType == STRUCTURE_CONTAINER ||
                         structure.structureType == STRUCTURE_LINK) &&
                         structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
                 }
@@ -108,6 +109,7 @@ var roleTransport = {
             }
         }
         else {
+            //if target is remote room, go to it first
             var targetRoom = creep.memory.targetRoom;
             if(targetRoom) {
                 if(creep.room.name != targetRoom) {

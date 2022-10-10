@@ -40,10 +40,40 @@ var roleRepairer = {
             }
         }
         else {
+
+            var source = taskCommon.getClosestEnergySource(creep);
+            var collectionMethod;
+
+            if(source instanceof Structure)
+                collectionMethod = "structure";
+            else
+                collectionMethod = "source";
             
-            var source = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES);
-            if(creep.pickup(source) == ERR_NOT_IN_RANGE) {
-                creep.travelTo(source, {visualizePathStyle: {stroke: '#ffaa00'}});
+            if(source) {                        
+                var result;
+                if(collectionMethod == "structure")
+                    result = creep.withdraw(source,RESOURCE_ENERGY);
+                else
+                    result = creep.pickup(source);
+                
+                if(result == ERR_NOT_IN_RANGE) {
+                    creep.travelTo(source,{ignoreCreeps: false,range:1,maxRooms:1,reusePath:8});
+                }
+                return;
+            }
+            else {
+                source = creep.pos.findClosestByRange(FIND_SOURCES);
+                var harvestResult = creep.harvest(source);
+                if( harvestResult == ERR_NOT_IN_RANGE) {
+                    creep.travelTo(source, {ignoreCreeps: false,range:1,maxRooms:1,reusePath:8});
+                }
+                if( harvestResult == OK ) { // TODO calc harvest count to fill dont hardcode
+                    if(creep.memory.hasHarvested && creep.memory.hasHarvested > 0) {
+                        creep.memory.hasHarvested--;
+                    }
+                    else
+                        creep.memory.hasHarvested = 12;// assuming 2 work parts TODO make dynamic
+                }
             }
             
             //default way, now replacing with dropped resource method

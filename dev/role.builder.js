@@ -1,3 +1,5 @@
+const taskCommon = require("./task.common");
+
 var roleBuilder = {
 
     /** @param {Creep} creep **/
@@ -113,13 +115,24 @@ var roleBuilder = {
                 }
                 
             }
-            else { //roadworkers sometimes get stuck on room edges sometimes no idea how/why, must still debug that.
+            else { //TODO roadworkers sometimes get stuck on room edges sometimes no idea how/why, must still debug that.
                 
                 if(!creep.room.storage) {
-                    var source = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES);
+
+                    var source = taskCommon.getClosestEnergySource(creep);
+                    var collectionMethod;
+
+                    if(source instanceof Structure)
+                        collectionMethod = "structure";
+                    else
+                        collectionMethod = "source";
                     
-                    if(source) {
-                        var result = creep.pickup(source);
+                    if(source) {                        
+                        var result;
+                        if(collectionMethod == "structure")
+                            result = creep.withdraw(source,RESOURCE_ENERGY);
+                        else
+                            result = creep.pickup(source);
                         
                         if(result == ERR_NOT_IN_RANGE) {
                             creep.travelTo(source,{ignoreCreeps: false,range:1,maxRooms:1,reusePath:8});
@@ -137,7 +150,7 @@ var roleBuilder = {
                                 creep.memory.hasHarvested--;
                             }
                             else
-                                creep.memory.hasHarvested = 25;
+                                creep.memory.hasHarvested = 12;// assuming 2 work parts TODO make dynamic
                         }
                     }
                 

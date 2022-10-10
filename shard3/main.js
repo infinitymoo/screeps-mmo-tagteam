@@ -7,6 +7,7 @@ var roleAttacker = require('role.attacker');
 var roleRefiller = require('role.refiller');
 var roleClaimer = require('role.claimer');
 var roleBreaker = require('role.breaker');
+var taskCommon = require('task.common');
 var Traveler = require('Traveler');
 var spawner = require('spawner');
 
