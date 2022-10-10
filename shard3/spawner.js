@@ -83,6 +83,19 @@
                     // body = [WORK,WORK,CARRY,MOVE];
                     //default
                     body = [WORK,CARRY,MOVE,MOVE];
+
+                    let harvesters = _.filter( Game.creeps, (creep) => {
+                        return creep.memory.role == "harvester"
+                    });
+
+                    if( harvesters && harvesters.length > 1 ) {
+                        //default
+                        body = [WORK,WORK,CARRY,MOVE];
+                    }
+                    else {
+                        //first harvester
+                        body = [WORK,CARRY,MOVE,MOVE];
+                    }
                 }
                 if( spawnParms.memory.role == "transport" ){
                     //TODO manage with state machine so i won't have to calc every time                    
@@ -123,7 +136,7 @@
                     //static miner
                     // body = [WORK,WORK,CARRY,MOVE];
                     //default
-                    body = [WORK,WORK,WORK,CARRY,MOVE,MOVE];
+                    body = [WORK,WORK,WORK,WORK,CARRY,MOVE,MOVE];
                 }
                 if( spawnParms.memory.role == "transport" ){
                     //TODO manage with state machine so i won't have to calc every time

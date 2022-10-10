@@ -24,7 +24,7 @@ var roleTransport = {
         else if(
             !creep.memory.transport &&
             
-            ((creep.store.getFreeCapacity() == 0 && //was creep.store[RESOURCE_ENERGY] != 0
+            ((creep.store[RESOURCE_ENERGY] != 0 && //was 
             (creep.room.name == creep.memory.homeRoom) ) ||
             
             (creep.store.getFreeCapacity() == 0 &&
@@ -123,15 +123,15 @@ var roleTransport = {
             
             //first determine if targetted hauling and execute if so, will focus on pickup around target only - also early return to avoid defaulting cleaning behaviour
             var target = Game.getObjectById(creep.memory.target);
-            var targetIsDry = false; // this diesn't check if dry just if doesn't have dropped resources to work from
+           // var targetIsDry = false; // this diesn't check if dry just if doesn't have dropped resources to work from
             
             //check if target is dry
-            if( target ) {
-                var source = target.pos.findClosestByRange(FIND_DROPPED_RESOURCES);
-                if( source && !target.pos.inRangeTo(source,4)) {
-                    targetIsDry = true;
-                }
-            }
+            // if( target ) {
+            //     var source = target.pos.findClosestByRange(FIND_DROPPED_RESOURCES);
+            //     if( source && !target.pos.inRangeTo(source,4)) {
+            //         targetIsDry = true;
+            //     }
+            // }
             
             if(target) {
                 var result;
@@ -139,24 +139,29 @@ var roleTransport = {
                 if(creep.pos.inRangeTo(target,1)) { //small swamps can screw up 2 range, so make it 4 before looking for dropped res
                     var source = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES);
                     
-                    if( source && creep.pos.inRangeTo(source,1) ) {
+                    if( source && creep.pos.inRangeTo(source,1) && target.pos.inRangeTo(source,4) ) {
                         result = creep.pickup(source);
                         if( result == ERR_NOT_IN_RANGE) {
                             creep.travelTo(source, {ignoreCreeps: false,range:1,maxRooms:1});
+                            return;
                         }
                         if( result == OK ) {
                             return;
                         }
                     }
-                    else {
-                        targetIsDry = true;
-                    }
+                    // else {
+                    //     targetIsDry = true;
+                    // }
                 }
-                //if not within 4 range of source nor within range of dropped resources, move closer to target to get ready for pickup when it does drop resources
-                if( !targetIsDry ) {
+                else {
                     result = creep.travelTo(target, {ignoreCreeps: false,range:1,maxRooms:1}); //small swamps can screw up 2 range, so make it 4 before looking for dropped res
                     return;
                 }
+                //if not within 4 range of source nor within range of dropped resources, move closer to target to get ready for pickup when it does drop resources
+                // if( !targetIsDry ) {
+                //     result = creep.travelTo(target, {ignoreCreeps: false,range:1,maxRooms:1}); //small swamps can screw up 2 range, so make it 4 before looking for dropped res
+                //     return;
+                // }
                 
             }
 

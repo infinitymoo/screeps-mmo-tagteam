@@ -58,12 +58,16 @@ module.exports.loop = function () {
         if( creepAmount < 5 && Memory.rooms[Memory.homeRoom].spawnQueue.length < 1 ) {            
             var sources = Game.rooms[Memory.homeRoom].find(FIND_SOURCES);
             //var sortedSources;
-            //Game.rooms[Memory.homeRoom].pos.findClosestByRange(FIND_SOURCES);
-            //
-            spawner.queueSpawn({memory:{role:'harvester',source:sources[0].id}});
-            spawner.queueSpawn({memory:{role:'transport'}});
+            var startSpawn;
+            for(var s in Game.spawns ) {
+                startSpawn = s;
+            }
+            var closestSource = Game.spawns[startSpawn].pos.findClosestByPath(FIND_SOURCES);
+            
+            spawner.queueSpawn({memory:{role:'harvester',source:closestSource.id}});
             spawner.queueSpawn({memory:{role:'transport'}});
             spawner.queueSpawn({memory:{role:'harvester',source:sources[1].id}});
+            spawner.queueSpawn({memory:{role:'transport'}});
             spawner.queueSpawn({memory:{role:'transport'}});
             spawner.queueSpawn({memory:{role:'harvester',source:sources[0].id}});                                                                                                                     
             spawner.queueSpawn({memory:{role:'harvester',source:sources[1].id}});
@@ -132,40 +136,43 @@ module.exports.loop = function () {
     
         for(var name in Game.creeps) {
             var creep = Game.creeps[name];
+
+            if(!creep.spawning) {
     
-            // homeRoom here used to be commented out and can be found on spawner code.
-            if(!creep.memory.homeRoom) {
-                creep.memory.homeRoom = Memory.homeRoom;            
-            }
-    
-            if(creep.memory.role == 'harvester') {
-                roleHarvester.run(creep);
-            }
-            if(creep.memory.role == 'upgrader') {
-                roleUpgrader.run(creep);
-            }
-            if(creep.memory.role == 'builder') {
-                roleBuilder.run(creep);
-            }
-            if(creep.memory.role == 'transport') {
-                roleTransport.run(creep);
-            }
-            if(creep.memory.role == 'repairer') {
-                roleRepairer.run(creep);
-            }
-            if(creep.memory.role == 'attacker') {
-                roleAttacker.run(creep);
-            }
-            if(creep.memory.role == 'refiller') {
-                roleRefiller.run(creep);
-            }
-            if(creep.memory.role == 'claimer') {
-                roleClaimer.run(creep);
+                // homeRoom here used to be commented out and can be found on spawner code.
+                if(!creep.memory.homeRoom) {
+                    creep.memory.homeRoom = Memory.homeRoom;            
+                }
+        
+                if(creep.memory.role == 'harvester') {
+                    roleHarvester.run(creep);
+                }
+                if(creep.memory.role == 'upgrader') {
+                    roleUpgrader.run(creep);
+                }
+                if(creep.memory.role == 'builder') {
+                    roleBuilder.run(creep);
+                }
+                if(creep.memory.role == 'transport') {
+                    roleTransport.run(creep);
+                }
+                if(creep.memory.role == 'repairer') {
+                    roleRepairer.run(creep);
+                }
+                if(creep.memory.role == 'attacker') {
+                    roleAttacker.run(creep);
+                }
+                if(creep.memory.role == 'refiller') {
+                    roleRefiller.run(creep);
+                }
+                if(creep.memory.role == 'claimer') {
+                    roleClaimer.run(creep);
+                }
             }
         }
     }
     catch( problem ) {
-        console.log(`main loop process runner section: ${problem}`);
+        console.log(`Exception thrown main loop process runner section: ${problem.name}: ${problem.message} ${problem.stack}  `);
     }
     
     // if(Game.rooms['W26N57'].controller.level == 5) {
