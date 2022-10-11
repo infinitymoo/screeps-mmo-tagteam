@@ -38,145 +38,186 @@ var roleRefiller = {
             creep.say('dropoff');
         }
 
-        // 3
-        if(creep.memory.transport) {
-            var target = false;
-            
-            if(creep.memory.targetLock) {
-                var targetLock = Game.getObjectById(creep.memory.targetLock);
-                if(targetLock.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
-                    target = targetLock;
-                }
-                else {
-                    delete creep.memory.targetLock;
-                }
-            }
-            
-            //we want a list of things to refill on our way to our targetlock for efficiency purposes
-            var targets = creep.room.find(FIND_STRUCTURES, {
-                filter: (structure) => {
-                    return (structure.structureType == STRUCTURE_EXTENSION ||
-                        structure.structureType == STRUCTURE_SPAWN ||
-                        structure.structureType == STRUCTURE_TOWER) &&
-                        structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
-                }
-            });
+        if(creep.memory.mode && creep.memory.mode == "static") {
 
-            // 4
-            
-            //don't have targetLock with free capacity
-            if(!target) {
-                if(targets[0]) {
-                    target = targets[0];
-                    creep.memory.targetLock = target.id;
-                }
+            if(!creep.memory.position) {
+                throw ("Exception thrown: role.refiller is static but no position specified");
             }
-            
-            // 5
-            //if we're passing something that can be filled on our way to our targetLock, fill it
-            if(target) {
-                var result;
-                if(targets.length > 1) {
-                    for(var i=1;i<targets.length;i++) {
-                        if(creep.pos.isNearTo(targets[i])) {
-                            result = creep.transfer(targets[i], RESOURCE_ENERGY);
-                            if(result == OK)
-                                break;
+
+            // TO DO ******************************************************************************
+
+            //if in position 
+            var staticPosition = new RoomPosition(creep.memory.position.x, creep.memory.position.y, creep.memory.homeRoom);
+            if(creep.pos.x == staticPosition.x && creep.pos.y == staticPosition.y) {
+                //ensure we know our flows
+                if( !creep.memory.sourceStructures ) {
+                    var sources = creep.room.find(FIND_STRUCTURES, {
+                        filter: (structure) => {
+                            return (structure.structureType == STRUCTURE_CONTAINER ||
+                                structure.structureType == STRUCTURE_STORAGE) &&
+                                creep.pos.isNearTo(structure);
                         }
-                    }
+                    });
                 }
-                
-                //transferred some energy but still not at target
-                if( result == OK && !creep.pos.isNearTo(target) &&
-                    (creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) ) {
-                        
-                    creep.travelTo(target, {ignoreCreeps: false,range:1,reusePath:10});
-                    //early return because already made successful intenT
-                    return;
-                }
-                
-                //transferred some energy but close enough to target, early return because already made successful intent
-                if(result == OK) {
-                    return;
-                }
-
-                // 6
-                
-                //if result wasn't OK (i.e. early returns happened yet) it means we haven't transferred energy yet, so might be at target to do it now.
-                result = creep.transfer(target, RESOURCE_ENERGY);
-                
-                if(result == ERR_NOT_IN_RANGE) {
-                    creep.travelTo(target, {ignoreCreeps: false,range:1,reusePath:10});
-                    return;
-                }
-                //if we reached our target and transferred successfully, release targetLock
-                if(result == OK) {
-                    delete creep.memory.targetLock;
-                }
-                
-            }
-
-            // 7
-            //TODO handle homeroom logic automatically, doesnt' seem any code for it
-            //if we didn't have a targetLock for the above block of code to run with, find Base Link to fill
-            if(creep.memory.homeRoom && 
-                Memory.rooms[creep.memory.homeRoom].baseLink && 
-                Game.getObjectById(Memory.rooms[creep.room.name].baseLink).store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
-                    
-                var baseLink = Game.getObjectById(Memory.rooms[creep.room.name].baseLink);
-                target = baseLink;
-                creep.memory.targetLock = baseLink.id;
-            }
-            
-            //TODO isn't this repeat of above? move to function and call it rather than copy pasta code?
-            if(target) {
-                var result;
-                //repeated code of transferring to structures on our way to target
-                if(targets.length > 1) {
-                    for(var i=1;i<targets.length;i++) {
-                        if(creep.pos.isNearTo(targets[i])) {
-                            result = creep.transfer(targets[i], RESOURCE_ENERGY);
-                            if(result == OK)
-                                break;
+                if( !creep.memory.targetStructures ) {
+                    var targets = creep.room.find(FIND_STRUCTURES, {
+                        filter: (structure) => {
+                            return (structure.structureType == STRUCTURE_EXTENSION ||
+                                structure.structureType == STRUCTURE_SPAWN ||
+                                structure.structureType == STRUCTURE_TOWER) &&
+                                structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
                         }
-                    }
+                    });
                 }
-                
-                if( result == OK && !creep.pos.isNearTo(target) ) {
-                    creep.travelTo(target, {ignoreCreeps: false,range:1,reusePath:10});
-                    return;
-                }
-                
-                result = creep.transfer(target, RESOURCE_ENERGY);
-                if(result == OK) {
-                    return;
-                }
-                
-                if(result == ERR_NOT_IN_RANGE) {
-                    creep.travelTo(targets[0], {ignoreCreeps: false,range:1});
-                    return;
-                }
+                //execute flows
+            }
+            //if not in position, get there first
+            else {
+                creep.travelTo( staticPosition );
             }
 
-            // 8
-            
-            //no targets, so lets go refill from storage.
-            let source = creep.room.storage;
-            if( source )
-                if( creep.withdraw(source,RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                    creep.travelTo(source, {ignoreCreeps: false,range:1,reusePath:10});
-                }
         }
-
-        // 9
-        //TODO what if there's no storage? need to have fallback behaviour.
-        //pickup mode
         else {
-            var source = creep.room.storage;
-            if( source ) {
-                var result = creep.withdraw(source,RESOURCE_ENERGY);
-                if( result == ERR_NOT_IN_RANGE) {
-                    creep.travelTo(source, {ignoreCreeps: false,range:1,reusePath:10});
+            // 3
+            if(creep.memory.transport) {
+                var target = false;
+                
+                if(creep.memory.targetLock) {
+                    var targetLock = Game.getObjectById(creep.memory.targetLock);
+                    if(targetLock.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
+                        target = targetLock;
+                    }
+                    else {
+                        delete creep.memory.targetLock;
+                    }
+                }
+                
+                //we want a list of things to refill on our way to our targetlock for efficiency purposes
+                var targets = creep.room.find(FIND_STRUCTURES, {
+                    filter: (structure) => {
+                        return (structure.structureType == STRUCTURE_EXTENSION ||
+                            structure.structureType == STRUCTURE_SPAWN ||
+                            structure.structureType == STRUCTURE_TOWER) &&
+                            structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
+                    }
+                });
+
+                // 4
+                
+                //don't have targetLock with free capacity
+                if(!target) {
+                    if(targets[0]) {
+                        target = targets[0];
+                        creep.memory.targetLock = target.id;
+                    }
+                }
+                
+                // 5
+                //if we're passing something that can be filled on our way to our targetLock, fill it
+                if(target) {
+                    var result;
+                    if(targets.length > 1) {
+                        for(var i=1;i<targets.length;i++) {
+                            if(creep.pos.isNearTo(targets[i])) {
+                                result = creep.transfer(targets[i], RESOURCE_ENERGY);
+                                if(result == OK)
+                                    break;
+                            }
+                        }
+                    }
+                    
+                    //transferred some energy but still not at target
+                    if( result == OK && !creep.pos.isNearTo(target) &&
+                        (creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) ) {
+                            
+                        creep.travelTo(target, {ignoreCreeps: false,range:1,reusePath:10});
+                        //early return because already made successful intenT
+                        return;
+                    }
+                    
+                    //transferred some energy but close enough to target, early return because already made successful intent
+                    if(result == OK) {
+                        return;
+                    }
+
+                    // 6
+                    
+                    //if result wasn't OK (i.e. early returns happened yet) it means we haven't transferred energy yet, so might be at target to do it now.
+                    result = creep.transfer(target, RESOURCE_ENERGY);
+                    
+                    if(result == ERR_NOT_IN_RANGE) {
+                        creep.travelTo(target, {ignoreCreeps: false,range:1,reusePath:10});
+                        return;
+                    }
+                    //if we reached our target and transferred successfully, release targetLock
+                    if(result == OK) {
+                        delete creep.memory.targetLock;
+                    }
+                    
+                }
+
+                // 7
+                //TODO handle homeroom logic automatically, doesnt' seem any code for it
+                //if we didn't have a targetLock for the above block of code to run with, find Base Link to fill
+                if(creep.memory.homeRoom && 
+                    Memory.rooms[creep.memory.homeRoom].baseLink && 
+                    Game.getObjectById(Memory.rooms[creep.room.name].baseLink).store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
+                        
+                    var baseLink = Game.getObjectById(Memory.rooms[creep.room.name].baseLink);
+                    target = baseLink;
+                    creep.memory.targetLock = baseLink.id;
+                }
+                
+                //TODO isn't this repeat of above? move to function and call it rather than copy pasta code?
+                if(target) {
+                    var result;
+                    //repeated code of transferring to structures on our way to target
+                    if(targets.length > 1) {
+                        for(var i=1;i<targets.length;i++) {
+                            if(creep.pos.isNearTo(targets[i])) {
+                                result = creep.transfer(targets[i], RESOURCE_ENERGY);
+                                if(result == OK)
+                                    break;
+                            }
+                        }
+                    }
+                    
+                    if( result == OK && !creep.pos.isNearTo(target) ) {
+                        creep.travelTo(target, {ignoreCreeps: false,range:1,reusePath:10});
+                        return;
+                    }
+                    
+                    result = creep.transfer(target, RESOURCE_ENERGY);
+                    if(result == OK) {
+                        return;
+                    }
+                    
+                    if(result == ERR_NOT_IN_RANGE) {
+                        creep.travelTo(targets[0], {ignoreCreeps: false,range:1});
+                        return;
+                    }
+                }
+
+                // 8
+                
+                //no targets, so lets go refill from storage.
+                let source = creep.room.storage;
+                if( source )
+                    if( creep.withdraw(source,RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                        creep.travelTo(source, {ignoreCreeps: false,range:1,reusePath:10});
+                    }
+            }
+
+            // 9
+            //TODO what if there's no storage? need to have fallback behaviour.
+            //pickup mode
+            else {
+                var source = creep.room.storage;
+                if( source ) {
+                    var result = creep.withdraw(source,RESOURCE_ENERGY);
+                    if( result == ERR_NOT_IN_RANGE) {
+                        creep.travelTo(source, {ignoreCreeps: false,range:1,reusePath:10});
+                    }
                 }
             }
         }
