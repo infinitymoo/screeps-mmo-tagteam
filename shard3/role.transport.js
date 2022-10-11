@@ -112,8 +112,10 @@ var roleTransport = {
             //if target is remote room, go to it first
             var targetRoom = creep.memory.targetRoom;
             if(!targetRoom) {
-                if(creep.memory.target) {
-                    targetRoom = Game.getObjectById(creep.memory.target).memory.target;
+                var targetRoom = creep.memory.targetRoom;
+                if(targetRoom && creep.room.name != Memory.homeRoom) {
+                    creep.travelTo(new RoomPosition(30,25,Memory.homeRoom), {ignoreCreeps:true,range:5}); //check if this is main cuase of heavy cpu use
+                    return;
                 }
             }
             if(targetRoom) {
@@ -142,6 +144,7 @@ var roleTransport = {
 
             //if we can't get a valid target from memory, it means we have to re-assign a new one.
             if(!target) {
+                delete Memory.creeps[creep.name].target;
                 var candidateTargets = _.filter( Game.creeps,(harvesterCreep) => {
                     return harvesterCreep.memory.role == "harvester" &&
                     roleHarvester.getTransportCoverage(harvesterCreep) < roleHarvester.getBaseRange(harvesterCreep) &&

@@ -99,6 +99,7 @@ module.exports.loop = function () {
                     tower.attack(closestHostile)
                 })
             }
+            /*
             else {
                 var closestDamagedStructure = towers[0].pos.findClosestByRange(FIND_STRUCTURES, {
                     filter: (structure) =>
@@ -125,6 +126,7 @@ module.exports.loop = function () {
                 }
                 }
             }
+            */
         }
     }
     catch( problem ) {
@@ -193,6 +195,7 @@ module.exports.loop = function () {
 // commands examples
 // Memory.rooms[Memory.homeRoom].remoteSources.push({id:'5bbcab769099fc012e6338fb',room:'W27N56',x:'',y:''})
 // Memory.rooms[Memory.homeRoom].spawnQueue.push({memory: { role:'harvester',source:'5bbcab769099fc012e6338fb'} })
+// Memory.rooms[Memory.homeRoom].spawnQueue.push({memory: { role:'harvester',source:'5bbcaf299099fc012e63a417',target:'E38N54'} })
 // Memory.rooms[Memory.homeRoom].spawnQueue.push({memory: { role:'transport',target:'5bbcab769099fc012e6338f6',targetRoom:'W26N58'} })
 // Memory.rooms[Memory.homeRoom].spawnQueue.push({memory: { role:'attacker',targetRoom:'W27N56'} })
 // Memory.rooms[Memory.homeRoom].spawnQueue.push({memory: { role:'claimer',targetRoom:''} })

@@ -20,7 +20,7 @@ var taskCommon = {
         }
         
         //no structures, maybe dropped resources are available
-        target = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES);        
+        target = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES); 
 
         if(target) {
             return target;

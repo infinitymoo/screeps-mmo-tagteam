@@ -99,6 +99,7 @@ module.exports.loop = function () {
                     tower.attack(closestHostile)
                 })
             }
+            /*
             else {
                 var closestDamagedStructure = towers[0].pos.findClosestByRange(FIND_STRUCTURES, {
                     filter: (structure) =>
@@ -125,6 +126,7 @@ module.exports.loop = function () {
                 }
                 }
             }
+            */
         }
     }
     catch( problem ) {
