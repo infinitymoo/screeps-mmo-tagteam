@@ -8,9 +8,7 @@ var taskCommon = {
         //first prize is structures to draw from
         var target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
             filter: (structure) => {
-                return (structure.structureType == STRUCTURE_EXTENSION ||
-                    structure.structureType == STRUCTURE_SPAWN ||
-                    structure.structureType == STRUCTURE_TOWER ||
+                return (
                     structure.structureType == STRUCTURE_CONTAINER ||
                     structure.structureType == STRUCTURE_LINK) &&
                     structure.store.getUsedCapacity(RESOURCE_ENERGY) > 0;
