@@ -123,6 +123,10 @@
                     //default
                      body = [CARRY,MOVE,CARRY,MOVE,CARRY,MOVE];             
                 }
+                if( spawnParms.memory.role == "repairer" ){
+                    //default
+                     body = [WORK,CARRY,MOVE];             
+                }
                 if( spawnParms.memory.role == "upgrader" || spawnParms.memory.role == "builder" ){
                     //default
                     body = [WORK,CARRY,MOVE,MOVE];                    
@@ -168,6 +172,10 @@
                     //default
                     body = [WORK,WORK,WORK,CARRY,MOVE,MOVE,MOVE,MOVE];
                 }
+                if( spawnParms.memory.role == "repairer" ){
+                    //default
+                     body = [WORK,CARRY,MOVE];             
+                }
                 if( spawnParms.memory.role == "attacker" ){
                     //default
                      body = [TOUGH,TOUGH,TOUGH,TOUGH,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,ATTACK,ATTACK];
@@ -209,6 +217,10 @@
                 if( spawnParms.memory.role == "upgrader" || spawnParms.memory.role == "builder" ){
                     //default
                     body = [WORK,WORK,WORK,CARRY,MOVE,MOVE,MOVE,MOVE];
+                }
+                if( spawnParms.memory.role == "repairer" ){
+                    //default
+                     body = [WORK,CARRY,MOVE];             
                 }
                 if( spawnParms.memory.role == "attacker" ){
                     //default
