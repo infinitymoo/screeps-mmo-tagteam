@@ -111,6 +111,11 @@ var roleTransport = {
         else {
             //if target is remote room, go to it first
             var targetRoom = creep.memory.targetRoom;
+            if(!targetRoom) {
+                if(creep.memory.target) {
+                    targetRoom = Game.getObjectById(creep.memory.target).memory.target;
+                }
+            }
             if(targetRoom) {
                 if(creep.room.name != targetRoom) {
                     var target = Game.getObjectById(creep.memory.target);
@@ -186,7 +191,8 @@ var roleTransport = {
                     }
                 }
                 else {
-                    result = creep.travelTo(target, {ignoreCreeps: false,range:1,maxRooms:1}); //small swamps can screw up 2 range, so make it 4 before looking for dropped res
+                    result = creep.travelTo(target/*, {ignoreCreeps: false,range:1,maxRooms:1}*/); //small swamps can screw up 2 range, so make it 4 before looking for dropped res
+                    //console.log(`transport ${creep.name} is trying to move to remote room ${}`);
                     return;
                 }
                 //if not within 4 range of source nor within range of dropped resources, move closer to target to get ready for pickup when it does drop resources
