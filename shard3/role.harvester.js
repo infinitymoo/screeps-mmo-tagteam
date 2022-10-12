@@ -202,9 +202,9 @@ var roleHarvester = {
     },
 
     /** @param {Creep} creep **/
-    getTransportCoverage: function(creep) {
-        if( !creep.memory.transportCoverage ){
-            creep.memory.transportCoverage = 0;
+    getTransportCoverage: function(harvesterCreep) {
+        if( !harvesterCreep.memory.transportCoverage ){
+            harvesterCreep.memory.transportCoverage = 0;
         }
 
         //validate if transportCoverage sources as still alive, if not, remove them from the coverage count
@@ -214,22 +214,22 @@ var roleHarvester = {
         var indexCounter = 0;        
         var hasUpdate = false;
         var updatedTotalCoverage = 0;
-        for(var transport in creep.memory.transportList) {
+        for(var transport in harvesterCreep.memory.transportList) {
             let transportCreep = Game.getObjectById(transport.id);
             if(!transportCreep) {
-                creep.memory.transportList.splice(indexCounter,1);
+                harvesterCreep.memory.transportList.splice(indexCounter,1);
                 hasUpdate = true;
             }
             else {
-                updatedTotalCoverage += creep.memory.transportList[indexCounter].coverage;
+                updatedTotalCoverage += harvesterCreep.memory.transportList[indexCounter].coverage;
             }
             indexCounter++;
         }
         if( hasUpdate ) {
-            creep.memory.transportCoverage = updatedTotalCoverage;
+            harvesterCreep.memory.transportCoverage = updatedTotalCoverage;
         }
 
-        return creep.memory.transportCoverage;
+        return harvesterCreep.memory.transportCoverage;
     },
 
     /** @param {Creep} harvesterCreep **/
