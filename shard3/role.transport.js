@@ -161,7 +161,7 @@ var roleTransport = {
 
             //if we can't get a valid target from memory, it means we have to re-assign a new one.
             if(!target) {
-                delete Memory.creeps[creep.name].target;
+                delete Memory.creeps[creep.name].target; //cleanup dead or non-existing target id reference;
                 var candidateTargets = _.filter( Game.creeps,(harvesterCreep) => {
                     return harvesterCreep.memory.role == "harvester" &&
                     roleHarvester.getTransportCoverage(harvesterCreep) < roleHarvester.getBaseRange(harvesterCreep) &&
@@ -173,6 +173,28 @@ var roleTransport = {
                     let transportCoverage = this.calcTransportCoverage(creep,candidateTargets[0],baseRange);
                     roleHarvester.setTransportCoverage(candidateTargets[0],transportCoverage);
                     creep.memory.target = candidateTargets[0].id;
+                }                
+            
+                //if no valid target could be found, look to make dropped source pile a target
+                
+                var sources = creep.room.find(FIND_DROPPED_RESOURCES);
+                
+                if(sources) {              
+                    var source;      
+                    if(sources.length > 1) {
+                        var biggestPile = 0;
+                        for(var i = 1; i < sources.length; i++) {
+                            if (sources[i].amount > sources[biggestPile].amount) {
+                                biggestPile = i;
+                            }
+                        }
+                        source = sources[biggestPile];
+                        creep.memory.target = source.id;
+                    }
+                    else if(sources[0]) {
+                        source = sources[0];
+                        creep.memory.target = sources[0].id;
+                    }
                 }
             }
             
@@ -221,34 +243,6 @@ var roleTransport = {
                 //     return;
                 // }
                 
-            }
-            
-            //if no targetted hauling, default to cleaning up dropped resources
-            var source = Game.getObjectById(creep.memory.source);
-            
-            if(!source) {
-                var sources = creep.room.find(FIND_DROPPED_RESOURCES);
-                
-                if(sources.length > 1) {
-                    var biggestPile = 0;
-                    for(var i = 1; i < sources.length; i++) {
-                        if (sources[i].amount > sources[biggestPile].amount) {
-                            biggestPile = i;
-                        }
-                    }
-                    source = sources[biggestPile];
-                    creep.memory.source = source.id;
-                }
-                else if(sources[0]) {
-                    source = sources[0];
-                    creep.memory.source = sources[0].id;
-                }
-            }
-            
-            if(source) {
-                if(creep.pickup(source) == ERR_NOT_IN_RANGE) {
-                    creep.travelTo(source, {ignoreCreeps: false,range:1,maxRooms:1});
-                }
             }
         }
     },
