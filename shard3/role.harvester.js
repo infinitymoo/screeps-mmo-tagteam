@@ -26,7 +26,7 @@ var roleHarvester = {
         // 1
         if(creep.store.getFreeCapacity() > 0) {
             var source = Game.getObjectById(creep.memory.source);
-            var wasRemoteRoom = false;
+            var wasRemoteRoom = false; // to check for blindness, not remoteness
             
             // 2
             //TODO - i have vision of rooms so will know sources sometimes, i think it expires cache then triggers below eventually, but its stuck for many ticks at first
@@ -176,7 +176,8 @@ var roleHarvester = {
             }
         }
         catch(e) {
-            console.log("Exception thrown: harvester getBaseRange can't get creep's source position probably because its blind. Returning -1");
+            //this works fine so commenting out the log spam - it just moves to remote room for now, TODO should change to x y json asap
+            //console.log("Exception thrown: harvester getBaseRange can't get creep's source position probably because its blind. Returning -1");
             return -1;
         }
 
@@ -207,13 +208,16 @@ var roleHarvester = {
         }
 
         //validate if transportCoverage sources as still alive, if not, remove them from the coverage count
+        if( !harvesterCreep.memory.transportList ) {
+            harvesterCreep.memory.transportList = [];
+        }
         var indexCounter = 0;        
         var hasUpdate = false;
         var updatedTotalCoverage = 0;
         for(var transport in creep.memory.transportList) {
             let transportCreep = Game.getObjectById(transport.id);
             if(!transportCreep) {
-                delete creep.memory.transportList[indexCounter];
+                creep.memory.transportList.splice(indexCounter,1);
                 hasUpdate = true;
             }
             else {

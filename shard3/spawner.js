@@ -225,6 +225,9 @@
                     //default
                      body = [TOUGH,TOUGH,TOUGH,TOUGH,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,ATTACK,ATTACK,HEAL];
                 }
+                if( spawnParms.memory.role == 'claimer') {
+                    body = [CLAIM,MOVE];
+                }
                 return body;
 
             }
@@ -259,7 +262,7 @@
                 }
                 if( spawnParms.memory.role == "upgrader" || spawnParms.memory.role == "builder" ){
                     //default
-                    body = [WORK,WORK,WORK,CARRY,MOVE,MOVE,MOVE,MOVE];
+                    body = [WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
                 }
                 if( spawnParms.memory.role == "attacker" ){
                     //default

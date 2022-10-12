@@ -16,7 +16,7 @@ module.exports.loop = function () {
    // try {
         for(var creepName in Memory.creeps) {
             if(!Game.creeps[creepName]) {
-                if(!Memory.creeps[creepName].norespawn || Memory.creeps[creepName].role == "breaker")
+                if(!Memory.creeps[creepName].norespawn || Memory.creeps[creepName].role == "breaker" || Memory.creeps[creepName].role == "claimer")
                     spawner.queueSpawn({memory:Memory.creeps[creepName]})
                 delete Memory.creeps[creepName];
             }
@@ -213,13 +213,14 @@ module.exports.loop = function () {
 /**
  * Base Development Code Goals
  * 1 - Spawn Container, extension placement, and fast-filler code
+ * 2 - S
  */
 
 /**
  * Limitations to deal with asap
  * 
  * 1 - When transports die, the harvesters they serviced still believe with transportCoverage that they have enough
- * 2 - 
+ * 2 - Soon as a storage is built, base died, for same reason it died when i built containers and made things fill it. Have to spawn refiller asap when storage is built.
  * 3 - Fall-back behaviour for roles that are too dependent on developed bases or areas
  * 4 - Basic Defense of main room
  * 5 - Automatic handling of raiders in remote rooms and prioritizing spawning of attacker to deal with it first
