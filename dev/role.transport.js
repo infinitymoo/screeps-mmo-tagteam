@@ -60,7 +60,7 @@ var roleTransport = {
             if(creep.room.storage && creep.room.storage.store.getFreeCapacity() > 0) {
                 let result = -1000;
                 if(!creep.pos.isNearTo(creep.room.storage) ) {
-                    creep.travelTo(creep.room.storage, {ignoreCreeps: false,range:1,maxRooms:1});
+                    creep.travelTo(creep.room.storage, {ignoreCreeps: false,range:1,maxRooms:3});
                 }
                 else {                            
                     result = creep.transfer(creep.room.storage, RESOURCE_ENERGY);
@@ -94,14 +94,14 @@ var roleTransport = {
                 }
                 
                 if( result == OK && !creep.pos.isNearTo(targets[0]) ) {
-                    creep.travelTo(targets[0], {ignoreCreeps: false,range:1,maxRooms:1});
+                    creep.travelTo(targets[0], {ignoreCreeps: false,range:1,maxRooms:3});
                     return;
                 }
                 
                 result = creep.transfer(targets[0], RESOURCE_ENERGY);
                 //console.log(result);
                 if(result == ERR_NOT_IN_RANGE) {
-                    creep.travelTo(targets[0], {ignoreCreeps: false,range:1,maxRooms:1});
+                    creep.travelTo(targets[0], {ignoreCreeps: false,range:1,maxRooms:3});
                 }
             }
             else {

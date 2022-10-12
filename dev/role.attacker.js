@@ -20,18 +20,20 @@ var roleAttacker = {
                 if(!isRemoteRoom) {
                     target = creep.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
                     if(target)
-                        creep.room.target = target.id;
+                        creep.memory.target = target.id;
                 }
                 
                 if(!target) {
                     target = creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES);
                     if(target && target.structureType != STRUCTURE_CONTROLLER)
-                        creep.room.target = target.id;
+                        creep.memory.target = target.id;
                 }
             }
             
             if(target) {
-                if(creep.attack(target) == ERR_NOT_IN_RANGE) {
+                var result = creep.attack(target);
+                //console.log("attacker result "+JSON.stringify(result));
+                if(result == ERR_NOT_IN_RANGE) {
                     creep.travelTo(target,{range:1});
                 }
             }
