@@ -205,16 +205,44 @@ var roleHarvester = {
         if( !creep.memory.transportCoverage ){
             creep.memory.transportCoverage = 0;
         }
+
+        //validate if transportCoverage sources as still alive, if not, remove them from the coverage count
+        var indexCounter = 0;        
+        var hasUpdate = false;
+        var updatedTotalCoverage = 0;
+        for(var transport in creep.memory.transportList) {
+            let transportCreep = Game.getObjectById(transport.id);
+            if(!transportCreep) {
+                delete creep.memory.transportList[indexCounter];
+                hasUpdate = true;
+            }
+            else {
+                updatedTotalCoverage += creep.memory.transportList[indexCounter].coverage;
+            }
+            indexCounter++;
+        }
+        if( hasUpdate ) {
+            creep.memory.transportCoverage = updatedTotalCoverage;
+        }
+
         return creep.memory.transportCoverage;
     },
 
-    /** @param {Creep} creep **/
+    /** @param {Creep} harvesterCreep **/
+    /** @param {string} transportId **/
     /** @param {number} transportCoverage **/
-    setTransportCoverage: function(creep,transportCoverage) {
-        if( !creep.memory.transportCoverage ){
-            creep.memory.transportCoverage = 0;
+    setTransportCoverage: function(harvesterCreep,transportId,transportCoverage) {
+        //if not initialized yet, instantiate the attribute for later use
+        if( !harvesterCreep.memory.transportCoverage ){
+            harvesterCreep.memory.transportCoverage = 0;
         }
-        creep.memory.transportCoverage += transportCoverage;
+        harvesterCreep.memory.transportCoverage += transportCoverage;
+
+        //same as above for transportList
+        if( !harvesterCreep.memory.transportList ) {
+            harvesterCreep.memory.transportList = [];
+        }
+        harvesterCreep.memory.transportList.push({id:transportId,coverage:transportCoverage});
     }
 };
 

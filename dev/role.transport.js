@@ -171,7 +171,7 @@ var roleTransport = {
                     //calculate transportcoverage and update the target harvester's coverage
                     let baseRange = roleHarvester.getBaseRange(candidateTargets[0]);
                     let transportCoverage = this.calcTransportCoverage(creep,candidateTargets[0],baseRange);
-                    roleHarvester.setTransportCoverage(candidateTargets[0],transportCoverage);
+                    roleHarvester.setTransportCoverage(candidateTargets[0],creep.id,transportCoverage);
                     creep.memory.target = candidateTargets[0].id;
                 }                
             
@@ -195,6 +195,7 @@ var roleTransport = {
                         source = sources[0];
                         creep.memory.target = sources[0].id;
                     }
+                    //we're in 
                 }
             }
             
@@ -277,7 +278,7 @@ var roleTransport = {
 
         //assume one step per tick and count both to and from travel. baseRange-2 because source+base positions don't count for distance,
         //transportRequirement is the amount of energy available for transport in the time a transport would take to go to base and come back
-        let transportRequirement = baseRange * basicSourceMaxRate * 2; 
+        let transportRequirement = baseRange * basicSourceMaxRate * 2; //unused right now
 
         //console.log(`Info: role.transport calcTransportCoverage transportRequirement: ${transportRequirement}`);
         
