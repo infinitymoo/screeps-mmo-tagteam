@@ -106,9 +106,11 @@ var roleTransport = {
             }
             else {
                 creep.travelTo(Game.rooms[creep.memory.homeRoom].controller,{range:4}); // this bugs out to other rooms for some reason if i check its own room. why though?
-                var range = creep.pos.getRangeTo(creep.room.controller.pos);
-                if(range == 4)
-                    creep.drop(RESOURCE_ENERGY);
+                if(creep.room.name == creep.memory.homeRoom) {
+                    var range = creep.pos.getRangeTo(creep.room.controller.pos);
+                    if(range == 4)
+                        creep.drop(RESOURCE_ENERGY);
+                }
             }
         }
         //pickup
