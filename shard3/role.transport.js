@@ -114,6 +114,7 @@ var roleTransport = {
 
 
             // LETS TRY AVOIDING TARGET ROOM ISSUES
+            /*
             var targetRoom = creep.memory.targetRoom;
             if(!targetRoom) {
                 var harvesterCreep = Game.getOtbjectById(creep.memory.target);
@@ -135,7 +136,7 @@ var roleTransport = {
                     return;
                 }
             }
-
+            */
 
 
 
