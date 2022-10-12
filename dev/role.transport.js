@@ -37,8 +37,8 @@ var roleTransport = {
 
         if(creep.memory.transport) {
             var targetRoom = creep.memory.targetRoom;
-            if(targetRoom && creep.room.name != Memory.homeRoom) {
-                creep.travelTo(new RoomPosition(30,25,Memory.homeRoom), {ignoreCreeps:true,range:5}); //check if this is main cuase of heavy cpu use
+            if(targetRoom && (creep.room.name != creep.memory.homeRoom)) {
+                creep.travelTo(new RoomPosition(25,25,creep.memory.homeRoom), {ignoreCreeps:true,range:20}); //check if this is main cuase of heavy cpu use
                 return;
             }
                 
@@ -110,14 +110,21 @@ var roleTransport = {
         }
         else {
             //if target is remote room, go to it first
+
+
+
+            // LETS TRY AVOIDING TARGET ROOM ISSUES
+            /*
             var targetRoom = creep.memory.targetRoom;
             if(!targetRoom) {
-                var targetRoom = creep.memory.targetRoom;
+                var harvesterCreep = Game.getOtbjectById(creep.memory.target);
+                targetRoom = harvesterCreep.room.name;
                 if(targetRoom && creep.room.name != Memory.homeRoom) {
-                    creep.travelTo(new RoomPosition(30,25,Memory.homeRoom), {ignoreCreeps:true,range:5}); //check if this is main cuase of heavy cpu use
+                    creep.travelTo(new RoomPosition(25,25,Memory.homeRoom), {ignoreCreeps:true,range:20}); //check if this is main cuase of heavy cpu use
                     return;
                 }
             }
+            
             if(targetRoom) {
                 if(creep.room.name != targetRoom) {
                     var target = Game.getObjectById(creep.memory.target);
@@ -129,6 +136,10 @@ var roleTransport = {
                     return;
                 }
             }
+            */
+
+
+
             
             //first determine if targetted hauling and execute if so, will focus on pickup around target only - also early return to avoid defaulting cleaning behaviour
             var target = Game.getObjectById(creep.memory.target);
@@ -235,6 +246,20 @@ var roleTransport = {
             }
         }
     },
+
+    sustainTarget: function(transportCreep) {
+
+        /*SELECT TARGET*/
+
+        /*CACHE TARGET*/
+
+        //recover target
+
+        //validate target
+
+    },
+
+
     
     //TODO need to be cognisant of road-coverage and transport type (plain vs roadster) to calculate this properly
     /** @param {Creep} transportCreep **/
