@@ -218,8 +218,8 @@ module.exports.loop = function () {
 /**
  * Limitations to deal with asap
  * 
- * 1 - TO TEST - Hardcoded and Manual attributes that behaviour depends on incl spawner 800 level
- * 2 - Enough startup intelligence for starting room to function perpetually
+ * 1 - When transports die, the harvesters they serviced still believe with transportCoverage that they have enough
+ * 2 - 
  * 3 - Fall-back behaviour for roles that are too dependent on developed bases or areas
  * 4 - Basic Defense of main room
  * 5 - Automatic handling of raiders in remote rooms and prioritizing spawning of attacker to deal with it first

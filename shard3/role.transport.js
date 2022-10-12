@@ -35,14 +35,17 @@ var roleTransport = {
             creep.say('dropoff');
         }
 
+        //drop off
         if(creep.memory.transport) {
+            /*
             var targetRoom = creep.memory.targetRoom;
             if(targetRoom && (creep.room.name != creep.memory.homeRoom)) {
                 creep.travelTo(new RoomPosition(25,25,creep.memory.homeRoom), {ignoreCreeps:true,range:20}); //check if this is main cuase of heavy cpu use
                 return;
             }
+            */
                 
-            var targets = creep.room.find(FIND_STRUCTURES, {
+            var targets = Game.rooms[creep.memory.homeRoom].find(FIND_STRUCTURES, {
                 filter: (structure) => {
                     return (structure.structureType == STRUCTURE_EXTENSION ||
                         structure.structureType == STRUCTURE_SPAWN ||
@@ -102,12 +105,13 @@ var roleTransport = {
                 }
             }
             else {
-                creep.travelTo(Game.rooms[Memory.homeRoom].controller,{range:4}); // this bugs out to other rooms for some reason if i check its own room. why though?
+                creep.travelTo(Game.rooms[creep.memory.homeRoom].controller,{range:4}); // this bugs out to other rooms for some reason if i check its own room. why though?
                 var range = creep.pos.getRangeTo(creep.room.controller.pos);
                 if(range == 4)
                     creep.drop(RESOURCE_ENERGY);
             }
         }
+        //pickup
         else {
             //if target is remote room, go to it first
 
@@ -173,10 +177,10 @@ var roleTransport = {
             if(target) {
                 var result;
                 //this code starts to look for energy dropped by typically harvesters to pick it up, but swamps screws with 2 range because its slow to travel on them so parm is 4 range.
-                if(creep.pos.inRangeTo(target,4)) { //small swamps can screw up 2 range, so make it 4 before looking for dropped res
+                if(creep.pos.inRangeTo(target,1)) { //small swamps can screw up 2 range, so make it 4 before looking for dropped res
                     var source = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES);
                     
-                    if( source && creep.pos.inRangeTo(source,4) && target.pos.inRangeTo(source,2) ) {
+                    if( source && creep.pos.inRangeTo(source,1) && target.pos.inRangeTo(source,1) ) {
                         result = creep.pickup(source);
                         if( result == ERR_NOT_IN_RANGE) {
                             creep.travelTo(source, {ignoreCreeps: false,range:1,maxRooms:3});
@@ -269,7 +273,7 @@ var roleTransport = {
         //calculate capacity based on max harvester utilization of unboosted normal energy node TODO - later to calc for midblock sources and boosted sources
         //let basicSourceMaxRate = 10;
 
-        console.log(`Info: role.transport calcTransportCoverage transportCreep: ${transportCreep.id}`);
+        //console.log(`Info: role.transport calcTransportCoverage transportCreep: ${transportCreep.id}`);
 
         //count work modules on harvester
         let harvesterParts = _.filter(harvesterCreep.body, function(b) {return b.type == WORK});
@@ -279,28 +283,28 @@ var roleTransport = {
         //transportRequirement is the amount of energy available for transport in the time a transport would take to go to base and come back
         let transportRequirement = baseRange * basicSourceMaxRate * 2; 
 
-        console.log(`Info: role.transport calcTransportCoverage transportRequirement: ${transportRequirement}`);
+        //console.log(`Info: role.transport calcTransportCoverage transportRequirement: ${transportRequirement}`);
         
-        console.log(`Info: role.transport calcTransportCoverage transportCreep.body: ${JSON.stringify(transportCreep.body)}`);
+        //console.log(`Info: role.transport calcTransportCoverage transportCreep.body: ${JSON.stringify(transportCreep.body)}`);
 
         let transportParts = _.filter(transportCreep.body, function(b) {return b.type == CARRY});
 
-        console.log(`Info: role.transport calcTransportCoverage transportParts length: ${transportParts.length}`);
+        //console.log(`Info: role.transport calcTransportCoverage transportParts length: ${transportParts.length}`);
 
         let transportCapacity = (transportParts.length * CARRY_CAPACITY); //CARRY_CAPACITY is typically 50 per CARRY
         
-        console.log(`Info: role.transport calcTransportCoverage transportCapacity: ${transportCapacity}`);
+        //console.log(`Info: role.transport calcTransportCoverage transportCapacity: ${transportCapacity}`);
 
         //transport rate must be compared with the source rate to measure efficiency (compare apples with apples)
         let transportRate = transportCapacity / (baseRange*basicSourceMaxRate*2);
         
-        console.log(`Info: role.transport calcTransportCoverage transportRate: ${transportRate}`);
+        //console.log(`Info: role.transport calcTransportCoverage transportRate: ${transportRate}`);
 
         //this strange calculation happens this way so that we can compare how much of the baseRange is covered with this transport's efficiency to easily see
         //in other code whether a harvester's transport requirements are filled or lacking
         let transportCoverage = transportRate * baseRange;
         
-        console.log(`Info: role.transport calcTransportCoverage transportCoverage: ${transportCoverage}`);
+        //console.log(`Info: role.transport calcTransportCoverage transportCoverage: ${transportCoverage}`);
 
         return transportCoverage;
     }
