@@ -16,7 +16,7 @@ module.exports.loop = function () {
    // try {
         for(var creepName in Memory.creeps) {
             if(!Game.creeps[creepName]) {
-                if(!Memory.creeps[creepName].norespawn && Memory.creeps[creepName].role != "breaker" || Memory.creeps[creepName].role != "claimer")
+                if(!Memory.creeps[creepName].norespawn || Memory.creeps[creepName].role != "breaker" || Memory.creeps[creepName].role != "claimer")
                     spawner.queueSpawn({memory:Memory.creeps[creepName]})
                 delete Memory.creeps[creepName];
             }
@@ -198,6 +198,7 @@ module.exports.loop = function () {
 // Memory.rooms[Memory.homeRoom].spawnQueue.push({memory: { role:'harvester',source:'5bbcaf299099fc012e63a417',target:'E38N54'} })
 // Memory.rooms[Memory.homeRoom].spawnQueue.push({memory: { role:'transport',target:'5bbcab769099fc012e6338f6',targetRoom:'W26N58'} })
 // Memory.rooms[Memory.homeRoom].spawnQueue.push({memory: { role:'attacker',targetRoom:'W27N56'} })
+// Memory.rooms[Memory.homeRoom].spawnQueue.push({memory: { role:'transport'} })
 // Memory.rooms[Memory.homeRoom].spawnQueue.push({memory: { role:'claimer',targetRoom:''} })
 // Game.spawns['Spawn1'].spawnCreep([WORK,WORK,WORK,WORK,WORK,MOVE],"mc1",{memory:{role:'harvester',source:'5bbcab769099fc012e6338fa'}})
 // Game.spawns['Spawn1'].spawnCreep([TOUGH,TOUGH,TOUGH,],"ac1",{memory:{role:'attacker',target:'606893f710cdfaf1e7eae488','targetRoom':'W25N57'}})
