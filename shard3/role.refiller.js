@@ -120,40 +120,26 @@ var roleRefiller = {
                         for(var i=1;i<targets.length;i++) {
                             if(creep.pos.isNearTo(targets[i])) {
                                 result = creep.transfer(targets[i], RESOURCE_ENERGY);
-                                if(result == OK)
-                                    break;
                             }
                         }
                     }
                     
                     //transferred some energy but still not at target
                     if( result == OK && !creep.pos.isNearTo(target) &&
-                        (creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) ) {
-                            
+                        (creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) ) {                            
                         creep.travelTo(target, {ignoreCreeps: false,range:1,reusePath:10});
-                        //early return because already made successful intenT
                         return;
                     }
-                    
-                    //transferred some energy but close enough to target, early return because already made successful intent
-                    if(result == OK) {
-                        return;
-                    }
-
-                    // 6
-                    
-                    //if result wasn't OK (i.e. early returns happened yet) it means we haven't transferred energy yet, so might be at target to do it now.
-                    result = creep.transfer(target, RESOURCE_ENERGY);
                     
                     if(result == ERR_NOT_IN_RANGE) {
                         creep.travelTo(target, {ignoreCreeps: false,range:1,reusePath:10});
                         return;
                     }
+
                     //if we reached our target and transferred successfully, release targetLock
-                    if(result == OK) {
+                    if(result == OK && creep.pos.isNearTo(target)) {
                         delete creep.memory.targetLock;
-                    }
-                    
+                    }                    
                 }
 
                 // 7
@@ -166,36 +152,6 @@ var roleRefiller = {
                     var baseLink = Game.getObjectById(Memory.rooms[creep.room.name].baseLink);
                     target = baseLink;
                     creep.memory.targetLock = baseLink.id;
-                }
-                
-                //TODO isn't this repeat of above? move to function and call it rather than copy pasta code?
-                if(target) {
-                    var result;
-                    //repeated code of transferring to structures on our way to target
-                    if(targets.length > 1) {
-                        for(var i=1;i<targets.length;i++) {
-                            if(creep.pos.isNearTo(targets[i])) {
-                                result = creep.transfer(targets[i], RESOURCE_ENERGY);
-                                if(result == OK)
-                                    break;
-                            }
-                        }
-                    }
-                    
-                    if( result == OK && !creep.pos.isNearTo(target) ) {
-                        creep.travelTo(target, {ignoreCreeps: false,range:1,reusePath:10});
-                        return;
-                    }
-                    
-                    result = creep.transfer(target, RESOURCE_ENERGY);
-                    if(result == OK) {
-                        return;
-                    }
-                    
-                    if(result == ERR_NOT_IN_RANGE) {
-                        creep.travelTo(targets[0], {ignoreCreeps: false,range:1});
-                        return;
-                    }
                 }
 
                 // 8

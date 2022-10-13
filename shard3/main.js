@@ -16,7 +16,7 @@ module.exports.loop = function () {
    // try {
         for(var creepName in Memory.creeps) {
             if(!Game.creeps[creepName]) {
-                if(!Memory.creeps[creepName].norespawn && Memory.creeps[creepName].role != "breaker" || Memory.creeps[creepName].role != "claimer")
+                if(!Memory.creeps[creepName].norespawn || Memory.creeps[creepName].role != "breaker" || Memory.creeps[creepName].role != "claimer")
                     spawner.queueSpawn({memory:Memory.creeps[creepName]})
                 delete Memory.creeps[creepName];
             }

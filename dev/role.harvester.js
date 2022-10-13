@@ -87,6 +87,15 @@ var roleHarvester = {
                 creep.drop(RESOURCE_ENERGY);
                 return;
             }
+
+            if(creep.memory.stripMiner) {
+                var source = Game.getObjectById(creep.memory.source);
+                var result = creep.harvest(source);
+                if(result == ERR_NOT_IN_RANGE) {
+                    creep.travelTo(source, {visualizePathStyle: {stroke: '#ffaa00'}});
+                }
+                return;
+            }
             
             // 7
             
@@ -203,31 +212,39 @@ var roleHarvester = {
 
     /** @param {Creep} creep **/
     getTransportCoverage: function(harvesterCreep) {
+        console.log(`getTransportCoverage harvester ${harvesterCreep.name} room:${harvesterCreep.room}`);
         if( !harvesterCreep.memory.transportCoverage ){
             harvesterCreep.memory.transportCoverage = 0;
+            console.log(`getTransportCoverage transportCoverage init 0`);
         }
 
         //validate if transportCoverage sources as still alive, if not, remove them from the coverage count
         if( !harvesterCreep.memory.transportList ) {
             harvesterCreep.memory.transportList = [];
+            console.log(`getTransportCoverage transportList init 0`);
         }
-        var indexCounter = 0;        
+
         var hasUpdate = false;
         var updatedTotalCoverage = 0;
-        for(var transport in harvesterCreep.memory.transportList) {
-            let transportCreep = Game.getObjectById(transport.id);
+        for(var t in harvesterCreep.memory.transportList) {
+            let transportCreep = Game.getObjectById(harvesterCreep.memory.transportList[t].id);
+            console.log(`getTransportCoverage transport id ${JSON.stringify(harvesterCreep.memory.transportList[t].id)}`);
             if(!transportCreep) {
-                harvesterCreep.memory.transportList.splice(indexCounter,1);
+                console.log(`getTransportCoverage splice ${harvesterCreep.memory.transportList[t].id} out of ${JSON.stringify(harvesterCreep.memory.transportList)}`);
+                harvesterCreep.memory.transportList.splice(t,1);
+                console.log(`getTransportCoverage spliced ${harvesterCreep.memory.transportList[t].id} out of ${JSON.stringify(harvesterCreep.memory.transportList)}`);
                 hasUpdate = true;
             }
             else {
-                updatedTotalCoverage += harvesterCreep.memory.transportList[indexCounter].coverage;
+                updatedTotalCoverage += harvesterCreep.memory.transportList[t].coverage;
+                console.log(`getTransportCoverage updatedTotalCoverage += ${harvesterCreep.memory.transportList[t].coverage}`);
             }
-            indexCounter++;
         }
         if( hasUpdate ) {
             harvesterCreep.memory.transportCoverage = updatedTotalCoverage;
         }
+        console.log(`getTransportCoverage updatedTotalCoverage finally ${updatedTotalCoverage}`);
+        console.log(`getTransportCoverage harvesterCreep.memory.transportCoverage finally ${harvesterCreep.memory.transportCoverage}`);
 
         return harvesterCreep.memory.transportCoverage;
     },
@@ -236,17 +253,26 @@ var roleHarvester = {
     /** @param {string} transportId **/
     /** @param {number} transportCoverage **/
     setTransportCoverage: function(harvesterCreep,transportId,transportCoverage) {
+
+        console.log(`setTransportCoverage harvester ${harvesterCreep.name} room:${harvesterCreep.room} setting ${transportId} with ${transportCoverage}`);
+
         //if not initialized yet, instantiate the attribute for later use
         if( !harvesterCreep.memory.transportCoverage ){
             harvesterCreep.memory.transportCoverage = 0;
+            console.log(`setTransportCoverage transportCoverage init 0`);
         }
         harvesterCreep.memory.transportCoverage += transportCoverage;
 
         //same as above for transportList
         if( !harvesterCreep.memory.transportList ) {
             harvesterCreep.memory.transportList = [];
+            console.log(`setTransportCoverage transportList init 0`);
         }
-        harvesterCreep.memory.transportList.push({id:transportId,coverage:transportCoverage});
+        let transportRegister = {id:transportId,coverage:transportCoverage};
+        
+        console.log(`setTransportCoverage transportRegister ${JSON.stringify(transportRegister)}`);
+
+        harvesterCreep.memory.transportList.push(transportRegister);
     }
 };
 

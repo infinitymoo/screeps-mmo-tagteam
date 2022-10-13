@@ -161,17 +161,23 @@ var roleTransport = {
 
             //if we can't get a valid target from memory, it means we have to re-assign a new one.
             if(!target) {
-                delete Memory.creeps[creep.name].target; //cleanup dead or non-existing target id reference;
+                delete creep.memory.target; //cleanup dead or non-existing target id reference;
                 var candidateTargets = _.filter( Game.creeps,(harvesterCreep) => {
                     return harvesterCreep.memory.role == "harvester" &&
-                    roleHarvester.getTransportCoverage(harvesterCreep) < roleHarvester.getBaseRange(harvesterCreep) &&
+                    (roleHarvester.getTransportCoverage(harvesterCreep) < 1) &&
                     !harvesterCreep.spawning});
 
                 if(candidateTargets[0]) {
                     //calculate transportcoverage and update the target harvester's coverage
                     let baseRange = roleHarvester.getBaseRange(candidateTargets[0]);
                     let transportCoverage = this.calcTransportCoverage(creep,candidateTargets[0],baseRange);
+
+                    console.log(`transport ${creep.id} returned calcTransportCoverage of ${transportCoverage} for ${baseRange}`);
+
                     roleHarvester.setTransportCoverage(candidateTargets[0],creep.id,transportCoverage);
+
+                    console.log(`transport ${creep.id} setting target ${candidateTargets[0].id}`)
+
                     creep.memory.target = candidateTargets[0].id;
                 }                
             
@@ -261,7 +267,7 @@ var roleTransport = {
     },
 
 
-    
+    // This calculates coverage as a percentile (e.g. return value of 1 = 100%, 0.5 = 50%) based on work parts, range from base and transport capacity
     //TODO need to be cognisant of road-coverage and transport type (plain vs roadster) to calculate this properly
     /** @param {Creep} transportCreep **/
     /** @param {Creep} harvesterCreep **/
@@ -270,38 +276,34 @@ var roleTransport = {
         //calculate capacity based on max harvester utilization of unboosted normal energy node TODO - later to calc for midblock sources and boosted sources
         //let basicSourceMaxRate = 10;
 
-        //console.log(`Info: role.transport calcTransportCoverage transportCreep: ${transportCreep.id}`);
+        console.log(`Info: role.transport calcTransportCoverage transportCreep: ${transportCreep.id}`);
 
         //count work modules on harvester
         let harvesterParts = _.filter(harvesterCreep.body, function(b) {return b.type == WORK});
-        let basicSourceMaxRate = harvesterParts.length*2;
+        let transportRequirementPerTick = harvesterParts.length*2;
 
         //assume one step per tick and count both to and from travel. baseRange-2 because source+base positions don't count for distance,
         //transportRequirement is the amount of energy available for transport in the time a transport would take to go to base and come back
-        let transportRequirement = baseRange * basicSourceMaxRate * 2; //unused right now
+        let transportCapacityRequirement =  transportRequirementPerTick * (baseRange * 2); //unused right now
 
-        //console.log(`Info: role.transport calcTransportCoverage transportRequirement: ${transportRequirement}`);
-        
-        //console.log(`Info: role.transport calcTransportCoverage transportCreep.body: ${JSON.stringify(transportCreep.body)}`);
+        console.log(`Info: role.transport calcTransportCoverage transportCapacityRequirement: ${transportCapacityRequirement}`);
 
         let transportParts = _.filter(transportCreep.body, function(b) {return b.type == CARRY});
 
-        //console.log(`Info: role.transport calcTransportCoverage transportParts length: ${transportParts.length}`);
-
         let transportCapacity = (transportParts.length * CARRY_CAPACITY); //CARRY_CAPACITY is typically 50 per CARRY
         
-        //console.log(`Info: role.transport calcTransportCoverage transportCapacity: ${transportCapacity}`);
+        console.log(`Info: role.transport calcTransportCoverage transportCapacity: ${transportCapacity}`);
 
         //transport rate must be compared with the source rate to measure efficiency (compare apples with apples)
-        let transportRate = transportCapacity / (baseRange*basicSourceMaxRate*2);
+        let transportRatePerTick = transportCapacity / (baseRange*2);
         
-        //console.log(`Info: role.transport calcTransportCoverage transportRate: ${transportRate}`);
+        console.log(`Info: role.transport calcTransportCoverage transportRate: ${transportRate}`);
 
         //this strange calculation happens this way so that we can compare how much of the baseRange is covered with this transport's efficiency to easily see
         //in other code whether a harvester's transport requirements are filled or lacking
-        let transportCoverage = transportRate * baseRange;
+        let transportCoverage = transportRatePerTick / transportRequirementPerTick;
         
-        //console.log(`Info: role.transport calcTransportCoverage transportCoverage: ${transportCoverage}`);
+        console.log(`Info: role.transport calcTransportCoverage transportCoverage: ${transportCoverage}`);
 
         return transportCoverage;
     }

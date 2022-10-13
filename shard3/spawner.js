@@ -226,7 +226,8 @@
                      body = [TOUGH,TOUGH,TOUGH,TOUGH,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,ATTACK,ATTACK,HEAL];
                 }
                 if( spawnParms.memory.role == 'claimer') {
-                    body = [CLAIM,MOVE];
+                    //do nothing for now until i can debug why it keeps respawming claimers
+                    //body = [CLAIM,MOVE];
                 }
                 return body;
 
@@ -269,7 +270,8 @@
                      body = [TOUGH,TOUGH,TOUGH,TOUGH,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,ATTACK,ATTACK,HEAL];
                 }                            
                 if( spawnParms.memory.role == 'claimer') {
-                    body = [CLAIM,CLAIM,MOVE,MOVE];
+                    //do nothing for now until i can debug why it keeps respawming claimers
+                    //body = [CLAIM,CLAIM,MOVE,MOVE];
                 }
                 return body;
             }
