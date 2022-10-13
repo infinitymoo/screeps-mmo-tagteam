@@ -271,7 +271,7 @@
                 }                            
                 if( spawnParms.memory.role == 'claimer') {
                     //do nothing for now until i can debug why it keeps respawming claimers
-                    //body = [CLAIM,CLAIM,MOVE,MOVE];
+                    body = [CLAIM,CLAIM,MOVE,MOVE];
                 }
                 return body;
             }

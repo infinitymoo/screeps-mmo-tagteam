@@ -79,7 +79,7 @@
             let body = [];
             //each if will catch and return early so rest shouldn't trigger until room is big enough for them
             //RCL 1
-            if(capacity <= 500) {
+            if(capacity < 550) {
                 if( spawnParms.memory.role == "harvester" ){
                     //static miner
                     // body = [WORK,WORK,CARRY,MOVE];
@@ -124,11 +124,11 @@
                 }
                 if( spawnParms.memory.role == "repairer" ){
                     //default
-                     body = [WORK,CARRY,MOVE];             
+                     body = [WORK,CARRY,MOVE];
                 }
                 if( spawnParms.memory.role == "upgrader" || spawnParms.memory.role == "builder" ){
                     //default
-                    body = [WORK,CARRY,MOVE,MOVE];                    
+                    body = [WORK,CARRY,MOVE,MOVE];
                 }
                 if( spawnParms.memory.role == "attacker" ){
                     //default
@@ -137,7 +137,7 @@
                 return body;
             }
             //RCL 2
-            if(capacity <= 750) {
+            if(capacity < 800) {
                 if( spawnParms.memory.role == "harvester" ){
                     //static miner
                     // body = [WORK,WORK,CARRY,MOVE];
@@ -169,7 +169,7 @@
                 }
                 if( spawnParms.memory.role == "upgrader" || spawnParms.memory.role == "builder" ){
                     //default
-                    body = [WORK,WORK,WORK,CARRY,MOVE,MOVE,MOVE,MOVE];
+                    body = [WORK,WORK,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
                 }
                 if( spawnParms.memory.role == "repairer" ){
                     //default
@@ -183,7 +183,7 @@
 
             }
             //RCL 3
-            if(capacity <= 1250) {
+            if(capacity < 1300) {
                 if( spawnParms.memory.role == "harvester" ){
                     //static miner
                     // body = [WORK,WORK,CARRY,MOVE];
@@ -211,7 +211,7 @@
                 }
                 if( spawnParms.memory.role == "refiller" ){
                     //default
-                     body = [CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE];           
+                     body = [CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE];           
                 }
                 if( spawnParms.memory.role == "upgrader" || spawnParms.memory.role == "builder" ){
                     //default
@@ -227,13 +227,13 @@
                 }
                 if( spawnParms.memory.role == 'claimer') {
                     //do nothing for now until i can debug why it keeps respawming claimers
-                    //body = [CLAIM,MOVE];
+                    body = [CLAIM,MOVE];
                 }
                 return body;
 
             }
             //RCL 4
-            if(capacity <= 1750) {
+            if(capacity < 1800) {
                 if( spawnParms.memory.role == "harvester" ){
                     //default
                     body = [WORK,WORK,WORK,WORK,WORK,CARRY,MOVE,MOVE,MOVE];
@@ -259,7 +259,7 @@
                 }
                 if( spawnParms.memory.role == "refiller" ){
                     //default
-                     body = [CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE];
+                     body = [CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE];
                 }
                 if( spawnParms.memory.role == "upgrader" || spawnParms.memory.role == "builder" ){
                     //default
@@ -271,7 +271,7 @@
                 }                            
                 if( spawnParms.memory.role == 'claimer') {
                     //do nothing for now until i can debug why it keeps respawming claimers
-                    //body = [CLAIM,CLAIM,MOVE,MOVE];
+                    body = [CLAIM,CLAIM,MOVE,MOVE];
                 }
                 return body;
             }
