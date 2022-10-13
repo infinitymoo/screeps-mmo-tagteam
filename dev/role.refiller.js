@@ -22,7 +22,7 @@
  * 3 modularize behaviours as much is shared with transport role
  */
 
-var roleRefiller = {
+ var roleRefiller = {
 
     /** @param {Creep} creep **/
     run: function(creep) {
@@ -121,17 +121,20 @@ var roleRefiller = {
                             if(creep.pos.isNearTo(targets[i])) {
                                 result = creep.transfer(targets[i], RESOURCE_ENERGY);
                             }
+                            if( result == OK ) {
+                                return;
+                            }
                         }
                     }
                     
                     //transferred some energy but still not at target
-                    if( result == OK && !creep.pos.isNearTo(target) &&
-                        (creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) ) {                            
-                        creep.travelTo(target, {ignoreCreeps: false,range:1,reusePath:10});
+                    if( creep.pos.isNearTo(target) && (creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) ) {      
+                        result = creep.transfer(target, RESOURCE_ENERGY);
                         return;
                     }
                     
-                    if(result == ERR_NOT_IN_RANGE) {
+                    //transferred some energy but still not at target
+                    if( !creep.pos.isNearTo(target) && (creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) ) {                            
                         creep.travelTo(target, {ignoreCreeps: false,range:1,reusePath:10});
                         return;
                     }
@@ -153,6 +156,8 @@ var roleRefiller = {
                     target = baseLink;
                     creep.memory.targetLock = baseLink.id;
                 }
+                
+                //console.log("refiller end of 7");
 
                 // 8
                 
