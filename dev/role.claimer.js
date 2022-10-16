@@ -5,12 +5,25 @@ var roleClaimer = {
         try {
             var targetRoom = creep.memory.targetRoom;
             if(targetRoom) {
-                var controller = Game.getObjectById(Game.rooms[targetRoom].controller.id);
+                var result;
+                var controller;
+                var roomObject = Game.rooms[targetRoom];
+
+                if(roomObject) {
+                    controller = roomObject.controller;
+                }
+                // if can't see room, assume its because we're blind to it
+                else {
+                    result = creep.travelTo(new RoomPosition(25,25,targetRoom),{swampCost:1,range:1});
+                    return;
+                }
+
+                //sometimes we can see the room we must go to but we're not there yet
                 if(targetRoom != creep.room.name) {
                     var result;
                     if(controller)
                         result = creep.travelTo(controller);
-                    else
+                    else // just in case but probably never called
                         result = creep.travelTo(new RoomPosition(25,25,targetRoom),{swampCost:1,range:1});
                     return;
                 }

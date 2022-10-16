@@ -16,7 +16,7 @@ module.exports.loop = function () {
    // try {
         for(var creepName in Memory.creeps) {
             if(!Game.creeps[creepName]) {
-                if(!Memory.creeps[creepName].norespawn || Memory.creeps[creepName].role != "breaker" || Memory.creeps[creepName].role != "claimer")
+                if(!Memory.creeps[creepName].norespawn && !(Memory.creeps[creepName].role == "breaker" || Memory.creeps[creepName].role == "attacker") )
                     spawner.queueSpawn({memory:Memory.creeps[creepName]})
                 delete Memory.creeps[creepName];
             }
@@ -137,10 +137,15 @@ module.exports.loop = function () {
         for(var spawn in Game.spawns) {
             spawner.run(Game.spawns[spawn]);
         }
+    }
+    catch( problem ) {
+        console.log(`Exception thrown main loop spawner runner section: ${problem.name}: ${problem.message} ${problem.stack}  `);
+    }
     
-        for(var name in Game.creeps) {
-            var creep = Game.creeps[name];
+    for(var name in Game.creeps) {
+        var creep = Game.creeps[name];
 
+        try {
             if(!creep.spawning) {
     
                 // homeRoom here used to be commented out and can be found on spawner code.
@@ -177,9 +182,9 @@ module.exports.loop = function () {
                 }
             }
         }
-    }
-    catch( problem ) {
-        console.log(`Exception thrown main loop process runner section: ${problem.name}: ${problem.message} ${problem.stack}  `);
+        catch( problem ) {
+            console.log(`Exception thrown main loop creep process runner section: ${problem.name}: ${problem.message} ${problem.stack}  `);
+        }
     }
     
     // if(Game.rooms['W26N57'].controller.level == 5) {
@@ -219,7 +224,8 @@ module.exports.loop = function () {
 
 /**
  * Limitations to deal with asap
- * 
+ * 0 - base dies at rcl 5 full extentions, something blocked things. when i destroyed 1 ext, refiller spawned correctly
+ * 0.1 - When harvesters die, i must prioritize the one with the closest to base to be respawned next, not just any one.
  * 1 - When transports die, the harvesters they serviced still believe with transportCoverage that they have enough
  * 2 - Soon as a storage is built, base died, for same reason it died when i built containers and made things fill it. Have to spawn refiller asap when storage is built.
  * 3 - Fall-back behaviour for roles that are too dependent on developed bases or areas
@@ -227,6 +233,7 @@ module.exports.loop = function () {
  * 5 - Automatic handling of raiders in remote rooms and prioritizing spawning of attacker to deal with it first
  * 6 - Don't call variables in memory directly from roles etc. but rather implement statemachine that can ensure they're initialized and valid before being accessed.
  * 7 - assuming some values e.g. carry capacity for calculations updated already but should use constants not hard values to make code reusable for different worlds
+ * 8 - Need to calculate how much decay happens in a room so i can calculate how much repairer work I can do
  *  */ 
 
 // IDEAS

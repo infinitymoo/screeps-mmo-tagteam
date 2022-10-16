@@ -37,6 +37,12 @@
             creep.memory.transport = true;
             creep.say('dropoff');
         }
+        
+        //optimization for if i'm close to it, even while running drop-off
+        var source = creep.room.storage;
+        if( source ) {
+            var result = creep.withdraw(source,RESOURCE_ENERGY);
+        }
 
         if(creep.memory.mode && creep.memory.mode == "static") {
 
@@ -64,8 +70,9 @@
                         filter: (structure) => {
                             return (structure.structureType == STRUCTURE_EXTENSION ||
                                 structure.structureType == STRUCTURE_SPAWN ||
+                                (structure.structureType == STRUCTURE_LINK && Game.rooms[creep.room.name].memory.baseLink == structure.id) || // only target link if its baselink
                                 structure.structureType == STRUCTURE_TOWER) &&
-                                structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
+                                structure.store.getFreeCapacity(RESOURCE_ENERGY) > 5;//avoid link transfer cost leaving 1 energy gaps to call for refilling
                         }
                     });
                 }
@@ -84,7 +91,7 @@
                 
                 if(creep.memory.targetLock) {
                     var targetLock = Game.getObjectById(creep.memory.targetLock);
-                    if(targetLock.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
+                    if(targetLock.store.getFreeCapacity(RESOURCE_ENERGY) > 5) {//avoid link transfer cost leaving 1 energy gaps to call for refilling
                         target = targetLock;
                     }
                     else {
@@ -97,8 +104,9 @@
                     filter: (structure) => {
                         return (structure.structureType == STRUCTURE_EXTENSION ||
                             structure.structureType == STRUCTURE_SPAWN ||
+                            (structure.structureType == STRUCTURE_LINK && Game.rooms[creep.room.name].memory.baseLink == structure.id) || // only target link if its baselink
                             structure.structureType == STRUCTURE_TOWER) &&
-                            structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
+                            structure.store.getFreeCapacity(RESOURCE_ENERGY) > 5;//avoid link transfer cost leaving 1 energy gaps to call for refilling
                     }
                 });
 
@@ -120,9 +128,6 @@
                         for(var i=1;i<targets.length;i++) {
                             if(creep.pos.isNearTo(targets[i])) {
                                 result = creep.transfer(targets[i], RESOURCE_ENERGY);
-                            }
-                            if( result == OK ) {
-                                return;
                             }
                         }
                     }
@@ -150,7 +155,7 @@
                 //if we didn't have a targetLock for the above block of code to run with, find Base Link to fill
                 if(creep.memory.homeRoom && 
                     Memory.rooms[creep.memory.homeRoom].baseLink && 
-                    Game.getObjectById(Memory.rooms[creep.room.name].baseLink).store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
+                    Game.getObjectById(Memory.rooms[creep.room.name].baseLink).store.getFreeCapacity(RESOURCE_ENERGY) > 5) {//avoid link transfer cost leaving 1 energy gaps to call for refilling
                         
                     var baseLink = Game.getObjectById(Memory.rooms[creep.room.name].baseLink);
                     target = baseLink;

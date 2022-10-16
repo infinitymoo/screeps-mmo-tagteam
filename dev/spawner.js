@@ -21,7 +21,6 @@
             if(spawnParms) {
                 
                     delete spawnParms.memory._trav;
-                    if(spawnParms.memory.baseRange) { delete spawnParms.memory.baseRange }
                     if(spawnParms.memory.transportCoverage) { delete spawnParms.memory.transportCoverage }
 
                     let body = this.getBody(spawnParms);                        
@@ -59,7 +58,7 @@
         }
         
         //TODO i don't think roadworkers should be prioritized, rest makes sense e.g. spawning ability and defense
-        if(parms.memory.role == 'refiller' || parms.memory.role == 'attacker'|| parms.memory.role == 'roadworker') {
+        if(parms.memory.role == 'refiller' || parms.memory.role == 'attacker'|| parms.memory.role == 'claimer') {
             Memory.rooms[Memory.homeRoom].spawnQueue.push(parms);
         }
         else {
@@ -273,14 +272,106 @@
                     //do nothing for now until i can debug why it keeps respawming claimers
                     body = [CLAIM,CLAIM,MOVE,MOVE];
                 }
+                if( spawnParms.memory.role == "repairer" ){
+                    //default
+                     body = [WORK,CARRY,MOVE];             
+                }
                 return body;
             }
             //RCL 5
-            if(capacity = 1800) {
+            if(capacity < 2300) {
+                if( spawnParms.memory.role == "harvester" ){
+                    //default
+                    body = [WORK,WORK,WORK,WORK,WORK,CARRY,MOVE,MOVE,MOVE];
+                }
+                if( spawnParms.memory.role == "transport" ){
+                    //TODO manage with state machine so i won't have to calc every time
+                    //check if first transport or not for startup initialization
+                    let transports = _.filter( Game.creeps, (creep) => {
+                        return creep.memory.role == "transport"
+                    });
+
+                    if( transports && transports.length > 2 ) {
+                        //default
+                        body = [CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE];
+                    }
+                    else {
+                        //first 3x transports
+                        body = [CARRY,MOVE];
+                    }
+
+                    //roads
+                    //body = [CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE];
+                }
+                if( spawnParms.memory.role == "refiller" ){
+                    //default
+                     body = [CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE];
+                }
+                if( spawnParms.memory.role == "upgrader" || spawnParms.memory.role == "builder" ){
+                    //default
+                    body = [WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
+                }
+                if( spawnParms.memory.role == "attacker" ){
+                    //default
+                     body = [TOUGH,TOUGH,TOUGH,TOUGH,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,ATTACK,ATTACK,HEAL];
+                }                            
+                if( spawnParms.memory.role == 'claimer') {
+                    //do nothing for now until i can debug why it keeps respawming claimers
+                    body = [CLAIM,CLAIM,MOVE,MOVE];
+                }
+                if( spawnParms.memory.role == "repairer" ){
+                    //default
+                     body = [WORK,CARRY,MOVE];             
+                }
+                return body;
 
             }
             //RCL 6
-            if(capacity = 2300) {
+            if(capacity < 5600) {
+                if( spawnParms.memory.role == "harvester" ){
+                    //default
+                    body = [WORK,WORK,WORK,WORK,WORK,CARRY,MOVE,MOVE,MOVE];
+                }
+                if( spawnParms.memory.role == "transport" ){
+                    //TODO manage with state machine so i won't have to calc every time
+                    //check if first transport or not for startup initialization
+                    let transports = _.filter( Game.creeps, (creep) => {
+                        return creep.memory.role == "transport"
+                    });
+
+                    if( transports && transports.length > 2 ) {
+                        //default
+                        body = [CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE];
+                    }
+                    else {
+                        //first 3x transports
+                        body = [CARRY,MOVE];
+                    }
+
+                    //roads
+                    //body = [CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE];
+                }
+                if( spawnParms.memory.role == "refiller" ){
+                    //default
+                     body = [CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE];
+                }
+                if( spawnParms.memory.role == "upgrader" || spawnParms.memory.role == "builder" ){
+                    //default
+                    body = [WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
+                }
+                if( spawnParms.memory.role == "attacker" ){
+                    //default
+                     body = [TOUGH,TOUGH,TOUGH,TOUGH,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,ATTACK,ATTACK,HEAL];
+                }                            
+                if( spawnParms.memory.role == 'claimer') {
+                    //do nothing for now until i can debug why it keeps respawming claimers
+                    body = [CLAIM,CLAIM,MOVE,MOVE];
+                }
+                if( spawnParms.memory.role == "repairer" ){
+                    //default
+                     body = [WORK,CARRY,MOVE];             
+                }
+                return body;
 
             }
             //RCL 7

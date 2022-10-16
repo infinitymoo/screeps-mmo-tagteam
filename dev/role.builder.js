@@ -18,100 +18,66 @@ var roleBuilder = {
                 
                 let targetRoom = creep.memory.targetRoom;
                 let targetLock = creep.memory.targetLock;
-                let target;
+                let target = Game.getObjectById(targetLock);
                 
-                if(targetLock) {
-                    target = Game.getObjectById(targetLock);
-                    if(creep.room.name != targetRoom) {
-                        creep.travelTo(
-                            new RoomPosition(
-                                target.pos.x,
-                                target.pos.y,
-                                targetRoom),
-                            { ignoreCreeps:false,
-                            range:3,
-                            reusePath:10});
-                    }
-                }
-                
-                if(targetRoom) {
-                    if(creep.room.name != targetRoom) {
-                        if(!Game.rooms[targetRoom]) {
-
-                            creep.travelTo(new RoomPosition(25,25,targetRoom), {ignoreCreeps:false,swampCost:1,range:1,maxRooms:4}); // TODO if targetlock true, i have precise dest, why move to room center?
-                           // console.log(`Builder ${creep.name} couldn't see Game's room ${targetRoom} while being in ${creep.room.name}`);
-                            return;
-                        }
-                        var buildSites = Game.rooms[targetRoom].find(FIND_CONSTRUCTION_SITES);
-                        if(buildSites.length > 0)
-                            creep.travelTo(new RoomPosition(buildSites[0].pos.x,buildSites[0].pos.y,targetRoom), {ignoreCreeps:false,swampCost:1,range:1,maxRooms:4,reusePath:10});
-                        else
-                            creep.travelTo(new RoomPosition(25,25,targetRoom), {ignoreCreeps:false,swampCost:1,range:1,maxRooms:4});// extra safety incase
-                        return;
-                    }
-                    
-                }
-                
-                var targets = creep.room.find(FIND_CONSTRUCTION_SITES);
-                if(targets.length) {
-                    if(creep.build(targets[0]) == ERR_NOT_IN_RANGE) {
-                        creep.travelTo(targets[0], {range:3,maxRooms:1});
-                    }
-                }
-                else {
-                    var targets = creep.room.find(FIND_MY_STRUCTURES, {
-                        filter: (structure) => {
-                            return (structure.hits < structure.hitsMax) &&
-                                structure.hits < 300000;
-                        }});
+                if(!target) {
+                    var buildSites = Game.rooms[creep.room.name].find(FIND_CONSTRUCTION_SITES);
+                    if(buildSites.length > 0) {
+                        targetLock = buildSites[0].id;
+                        target = Game.getObjectById(targetLock);
                         
-                    if(targets[0]) {
-                        if(creep.repair(targets[0]) == ERR_NOT_IN_RANGE) {
-                            creep.travelTo(targets[0], {ignoreCreeps: false,range:3,maxRooms:1});
+                        creep.memory.targetLock = targetLock;
+                        creep.memory.targetRoom = target.room.name;
+                    }
+                }
+
+                if(!targetRoom) {
+                    //if we can see target, it means we can set targetRoom from it
+                    if( target ) {
+                        targetRoom = target.room.name;
+                        creep.memory.targetRoom = targetRoom;
+                    }
+                }
+                        
+                if(target) {
+                    var result = creep.build(target);
+
+                    try {
+
+                        if(result == ERR_NOT_IN_RANGE) {
+                            creep.travelTo(
+                                new RoomPosition(
+                                    target.pos.x,
+                                    target.pos.y,
+                                    targetRoom),
+                                { ignoreCreeps:false,
+                                range:3,
+                                reusePath:10});
                         }
-                        return; //early return if i could do this, toa void running below code
+                    }
+                    catch(problem) {
+                        console.log(`Exception builder: ${problem.name}: ${problem.message} ${problem.stack}  `);
                     }
                     
-                    targets = creep.room.find(FIND_STRUCTURES, {
-                        filter: (structure) => {
-                            return (structure.hits < structure.hitsMax) &&
-                                (structure.structureType == STRUCTURE_ROAD ||
-                                structure.structureType == STRUCTURE_CONTAINER);
-                        }});
-                    
-                    if(targets[0]) {
-                        if(creep.repair(targets[0]) == ERR_NOT_IN_RANGE) {
-                            let cpu = Game.cpu.getUsed();
-                            creep.moveTo(targets[0],{range:3});
-                            let cpuUsed = Game.cpu.getUsed() - cpu;
-                            let delta = _.round(cpuUsed);
-                            if (delta > 500) {
-                                // see note at end of file for more info on this
-                                console.log(`DEFAULT MOVING: heavy cpu use: ${creep.name}, cpu: ${state.cpu} origin: ${creep.pos}, dest: ${destination}`);
-                            }
-                            
-                            //creep.travelTo(targets[0], {ignoreCreeps: false,range:3,maxRooms:1}); //seems i get a lot of high cpu use here
-                        }
-                        return; //early return if i could do this, toa void running below code
+                    return;
+                }
+                else if(creep.room.name != targetRoom) {
+                    var destRoom = new RoomPosition(25,25,targetRoom);
+                    creep.travelTo(destRoom, {ignoreCreeps:false,swampCost:1,range:1,maxRooms:4});
+                    return;
+                }
+                //no targets set and we're in same room as we think we should be, so look for sites to build
+                else {
+                    var buildSites = Game.rooms[creep.room.name].find(FIND_CONSTRUCTION_SITES);
+                    if(buildSites.length > 0) {
+                        target = buildSites[0];
+                        creep.memory.target = target;
                     }
-                    
-                    targets = creep.room.find(FIND_STRUCTURES, {
-                        filter: (structure) => {
-                            return (structure.hits < structure.hitsMax) &&
-                                structure.structureType == STRUCTURE_RAMPART &&
-                                structure.hits < 2000000;
-                        }});
-                    
-                    if(targets[0]) {
-                        if(creep.repair(targets[0]) == ERR_NOT_IN_RANGE) {
-                            creep.moveTo(targets[0],{ignoreCreeps: false,range:3,maxRooms:1});
-                        }
-                        return; //early return if i could do this, toa void running below code
-                    }
-                    
-                    if(creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
-                        creep.travelTo(creep.room.controller, {ignoreCreeps: false,range:1,maxRooms:1});
-                    }
+                }
+                
+                //defaulting behaviour
+                if(!target) {
+                    this.doRepair(creep);
                 }
                 
             }
@@ -149,8 +115,12 @@ var roleBuilder = {
                             if(creep.memory.hasHarvested && creep.memory.hasHarvested > 0) {
                                 creep.memory.hasHarvested--;
                             }
-                            else
-                                creep.memory.hasHarvested = 12;// assuming 2 work parts TODO make dynamic
+                            else {
+                                let capacity = creep.store.getFreeCapacity();
+                                let workParts = _.filter(creep.body, function(b) {return b.type == WORK});
+                                let harvestRate = workParts.length*2;
+                                creep.memory.hasHarvested = capacity/(harvestRate*2);
+                            }
                         }
                     }
                 
@@ -166,9 +136,68 @@ var roleBuilder = {
                 }
             }
         }
-        catch {
-            console.log('builder threw exception: ' + creep.name);
+        catch (problem) {
+            console.log(`Exception builder: ${problem.name}: ${problem.message} ${problem.stack}  `);
         }
+    },
+
+    //TODO needs optimization badly
+    /** @param {Creep} creep **/
+    doRepair: function(creep) {
+        var targets = creep.room.find(FIND_MY_STRUCTURES, {
+            filter: (structure) => {
+                return (structure.hits < structure.hitsMax) &&
+                    structure.hits < 300000;
+            }});
+            
+        if(targets[0]) {
+            if(creep.repair(targets[0]) == ERR_NOT_IN_RANGE) {
+                creep.travelTo(targets[0], {ignoreCreeps: false,range:3,maxRooms:1});
+            }
+            return; //early return if i could do this, toa void running below code
+        }
+        
+        targets = creep.room.find(FIND_STRUCTURES, {
+            filter: (structure) => {
+                return (structure.hits < structure.hitsMax) &&
+                    (structure.structureType == STRUCTURE_ROAD ||
+                    structure.structureType == STRUCTURE_CONTAINER);
+            }});
+        
+        if(targets[0]) {
+            if(creep.repair(targets[0]) == ERR_NOT_IN_RANGE) {
+                let cpu = Game.cpu.getUsed();
+                creep.moveTo(targets[0],{range:3});
+                let cpuUsed = Game.cpu.getUsed() - cpu;
+                let delta = _.round(cpuUsed);
+                if (delta > 500) {
+                    // see note at end of file for more info on this
+                    console.log(`DEFAULT MOVING: heavy cpu use: ${creep.name}, cpu: ${state.cpu} origin: ${creep.pos}, dest: ${destination}`);
+                }
+                
+                //creep.travelTo(targets[0], {ignoreCreeps: false,range:3,maxRooms:1}); //seems i get a lot of high cpu use here
+            }
+            return; //early return if i could do this, toa void running below code
+        }
+        
+        targets = creep.room.find(FIND_STRUCTURES, {
+            filter: (structure) => {
+                return (structure.hits < structure.hitsMax) &&
+                    structure.structureType == STRUCTURE_RAMPART &&
+                    structure.hits < 2000000;
+            }});
+        
+        if(targets[0]) {
+            if(creep.repair(targets[0]) == ERR_NOT_IN_RANGE) {
+                creep.moveTo(targets[0],{ignoreCreeps: false,range:3,maxRooms:1});
+            }
+            return; //early return if i could do this, toa void running below code
+        }
+        
+        if(creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
+            creep.travelTo(creep.room.controller, {ignoreCreeps: false,range:1,maxRooms:1});
+        }
+
     }
 };
 

@@ -212,9 +212,10 @@ var roleHarvester = {
 
     /** @param {Creep} creep **/
     getTransportCoverage: function(harvesterCreep) {
-        console.log(`getTransportCoverage harvester ${harvesterCreep.name} room:${harvesterCreep.room}`);
-        if( !harvesterCreep.memory.transportCoverage ){
+        //console.log(`getTransportCoverage harvester ${harvesterCreep.name} room:${harvesterCreep.room}`);
+        if( !harvesterCreep.memory.transportCoverage || harvesterCreep.memory.transportCoverage < 0 ){
             harvesterCreep.memory.transportCoverage = 0;
+            harvesterCreep.memory.transportList = [];
             //console.log(`getTransportCoverage transportCoverage init 0`);
         }
 
@@ -226,17 +227,21 @@ var roleHarvester = {
 
         var hasUpdate = false;
         var updatedTotalCoverage = 0;
+        var updatedTransportList = [];
         for(var t in harvesterCreep.memory.transportList) {
             let transportCreep = Game.getObjectById(harvesterCreep.memory.transportList[t].id);
             //console.log(`getTransportCoverage transport id ${JSON.stringify(harvesterCreep.memory.transportList[t].id)}`);
             if(!transportCreep) {
                 //console.log(`getTransportCoverage splice ${harvesterCreep.memory.transportList[t].id} out of ${JSON.stringify(harvesterCreep.memory.transportList)}`);
-                harvesterCreep.memory.transportList.splice(t,1);
+                //harvesterCreep.memory.transportList.splice(t,1); // doen'st seem to work, so rather trying rebuild of updatedtransport list approach. refactor this out if works.
                 //console.log(`getTransportCoverage spliced ${harvesterCreep.memory.transportList[t].id} out of ${JSON.stringify(harvesterCreep.memory.transportList)}`);
                 hasUpdate = true;
             }
             else {
-                updatedTotalCoverage += harvesterCreep.memory.transportList[t].coverage;
+                if(transportCreep.memory.target == harvesterCreep.id){
+                    updatedTotalCoverage += harvesterCreep.memory.transportList[t].coverage;
+                    updatedTransportList.push(harvesterCreep.memory.transportList[t]);
+                }
                 //console.log(`getTransportCoverage updatedTotalCoverage += ${harvesterCreep.memory.transportList[t].coverage}`);
             }
         }
@@ -245,7 +250,7 @@ var roleHarvester = {
         }
         //console.log(`getTransportCoverage updatedTotalCoverage finally ${updatedTotalCoverage}`);
         //console.log(`getTransportCoverage harvesterCreep.memory.transportCoverage finally ${harvesterCreep.memory.transportCoverage}`);
-
+        harvesterCreep.memory.transportList = updatedTransportList;
         return harvesterCreep.memory.transportCoverage;
     },
 
