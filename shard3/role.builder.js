@@ -19,6 +19,17 @@ var roleBuilder = {
                 let targetRoom = creep.memory.targetRoom;
                 let targetLock = creep.memory.targetLock;
                 let target = Game.getObjectById(targetLock);
+                
+                if(!target) {
+                    var buildSites = Game.rooms[creep.room.name].find(FIND_CONSTRUCTION_SITES);
+                    if(buildSites.length > 0) {
+                        targetLock = buildSites[0].id;
+                        target = Game.getObjectById(targetLock);
+                        
+                        creep.memory.targetLock = targetLock;
+                        creep.memory.targetRoom = target.room.name;
+                    }
+                }
 
                 if(!targetRoom) {
                     //if we can see target, it means we can set targetRoom from it
@@ -31,20 +42,28 @@ var roleBuilder = {
                 if(target) {
                     var result = creep.build(target);
 
-                    if(result == ERR_NOT_IN_RANGE) {
-                        creep.travelTo(
-                            new RoomPosition(
-                                target.pos.x,
-                                target.pos.y,
-                                targetRoom),
-                            { ignoreCreeps:false,
-                            range:3,
-                            reusePath:10});
+                    try {
+
+                        if(result == ERR_NOT_IN_RANGE) {
+                            creep.travelTo(
+                                new RoomPosition(
+                                    target.pos.x,
+                                    target.pos.y,
+                                    targetRoom),
+                                { ignoreCreeps:false,
+                                range:3,
+                                reusePath:10});
+                        }
                     }
+                    catch(problem) {
+                        console.log(`Exception builder: ${problem.name}: ${problem.message} ${problem.stack}  `);
+                    }
+                    
                     return;
                 }
                 else if(creep.room.name != targetRoom) {
-                    creep.travelTo(new RoomPosition(25,25,targetRoom), {ignoreCreeps:false,swampCost:1,range:1,maxRooms:4});
+                    var destRoom = new RoomPosition(25,25,targetRoom);
+                    creep.travelTo(destRoom, {ignoreCreeps:false,swampCost:1,range:1,maxRooms:4});
                     return;
                 }
                 //no targets set and we're in same room as we think we should be, so look for sites to build
@@ -117,8 +136,8 @@ var roleBuilder = {
                 }
             }
         }
-        catch {
-            console.log('builder threw exception: ' + creep.name);
+        catch (problem) {
+            console.log(`Exception builder: ${problem.name}: ${problem.message} ${problem.stack}  `);
         }
     },
 

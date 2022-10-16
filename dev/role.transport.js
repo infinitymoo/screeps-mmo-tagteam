@@ -140,19 +140,22 @@ var roleTransport = {
                         }
                     }
                 }
+                
+                console.log("transport candidates: "+JSON.stringify(candidateTargets));
 
                 if(candidateTargets[0]) {
                     //calculate transportcoverage and update the target harvester's coverage
-                    let baseRange = roleHarvester.getBaseRange(candidateTargets[0]);
-                    let transportCoverage = this.calcTransportCoverage(creep,candidateTargets[0],baseRange);
+                    let harvesterCreep = Game.getObjectById(candidateTargets[0]);
+                    let baseRange = roleHarvester.getBaseRange(harvesterCreep);
+                    let transportCoverage = this.calcTransportCoverage(creep,harvesterCreep,baseRange);
 
                     //console.log(`transport ${creep.id} returned calcTransportCoverage of ${transportCoverage} for ${baseRange}`);
 
-                    roleHarvester.setTransportCoverage(candidateTargets[0],creep.id,transportCoverage);
+                    roleHarvester.setTransportCoverage(harvesterCreep,creep.id,transportCoverage);
 
                     //console.log(`transport ${creep.id} setting target ${candidateTargets[0].id}`)
 
-                    creep.memory.target = candidateTargets[0].id;
+                    creep.memory.target = harvesterCreep.id;
                     target = creep.memory.target;
                 }
             }
