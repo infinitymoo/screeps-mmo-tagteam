@@ -406,7 +406,7 @@
             // BODYPART_COST
         }
         catch( problem ) {
-            console.log(`spawner.getBodyCost couldn't get role from spawnParms: ${JSON.stringify(problem)}'`);
+            console.log(`Exception spawner.getBodyCost couldn't get role from spawnParms: ${problem.name}: ${JSON.stringify(problem.message)} ${problem.stack}  `);
         }
     }
 }
