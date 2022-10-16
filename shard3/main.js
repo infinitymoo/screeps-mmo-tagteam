@@ -224,7 +224,8 @@ module.exports.loop = function () {
 
 /**
  * Limitations to deal with asap
- * 
+ * 0 - base dies at rcl 5 full extentions, something blocked things. when i destroyed 1 ext, refiller spawned correctly
+ * 0.1 - When harvesters die, i must prioritize the one with the closest to base to be respawned next, not just any one.
  * 1 - When transports die, the harvesters they serviced still believe with transportCoverage that they have enough
  * 2 - Soon as a storage is built, base died, for same reason it died when i built containers and made things fill it. Have to spawn refiller asap when storage is built.
  * 3 - Fall-back behaviour for roles that are too dependent on developed bases or areas
