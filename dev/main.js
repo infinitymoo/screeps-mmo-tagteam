@@ -1,3 +1,5 @@
+var baseCommon = require('base.common');
+
 var roleHarvester = require('role.harvester');
 var roleUpgrader = require('role.upgrader');
 var roleBuilder = require('role.builder');
@@ -12,76 +14,47 @@ var Traveler = require('Traveler');
 var spawner = require('spawner');
 
 module.exports.loop = function () {
-    
-   // try {
-        for(var creepName in Memory.creeps) {
-            if(!Game.creeps[creepName]) {
-                if(!Memory.creeps[creepName].norespawn && !(Memory.creeps[creepName].role == "breaker" || Memory.creeps[creepName].role == "attacker") )
-                    spawner.queueSpawn({memory:Memory.creeps[creepName]})
-                delete Memory.creeps[creepName];
-            }
-        }
-    //     var e = new Error('Exception caught: Main loop() creep garbage collection and respawn');
-    //     throw Error(e);
-        
-    // }
-    // catch( error ) {
-    //     console.log(`${e}.stack`);
-    // }
+  
+    baseCommon.garbageCollection();
 
-    //try {
-        /** INITIALIZE STATE */
-        if(!Memory.rooms) {
-            Memory.rooms = {};
+    /** INITIALIZE STATE */
+    if(!Memory.rooms) {
+        Memory.rooms = {};
+    }
+    let ownedRooms = baseCommon.getOwnedRooms();
+    for(const i in ownedRooms) {
+        if( !Memory.rooms[ownedRooms[i]] ) {
+            Memory.rooms[ownedRooms[i]] = {};
         }
-        if(!Memory.homeRoom) {
-            for(const i in Game.spawns) {
-                Memory.homeRoom = Game.spawns[i].room.name;
-                break;
-            }
+        if( !Memory.rooms[ownedRooms[i]].spawnQueue ) {
+            Memory.rooms[ownedRooms[i]].spawnQueue = [];
         }
-        if( !Memory.rooms[Memory.homeRoom] ) {
-            Memory.rooms[Memory.homeRoom] = {};
-        }
-        if( !Memory.rooms[Memory.homeRoom].spawnQueue ) {
-            Memory.rooms[Memory.homeRoom].spawnQueue = []
-        }
+    }
+
+    //in this state it means we have to kickstart/boot the room
+    // TODO should be per controlled room, not global
+    // TODO 
+    var creepAmount = 0;
+    for(var i in Memory.creeps){creepAmount++};
     
-        //in this state it means we have to kickstart/boot the room
-        
-        //TODO SHOULD BE Memory.rooms and should be sim, but memory is empty of rooms etf
-        if( !Game.rooms[Memory.homeRoom].spawnQueue ) {
-            Game.rooms[Memory.homeRoom].spawnQueue = []
+    if( creepAmount < 5 && Memory.rooms[Memory.homeRoom].spawnQueue.length < 7 ) {            
+        var sources = Game.rooms[Memory.homeRoom].find(FIND_SOURCES);
+        //var sortedSources;
+        var startSpawn;
+        for(var s in Game.spawns ) {
+            startSpawn = s;
         }
+        var closestSource = Game.spawns[startSpawn].pos.findClosestByPath(FIND_SOURCES);
         
-        var creepAmount = 0;
-        for(var i in Memory.creeps){creepAmount++};
-        
-        if( creepAmount < 5 && Memory.rooms[Memory.homeRoom].spawnQueue.length < 1 ) {            
-            var sources = Game.rooms[Memory.homeRoom].find(FIND_SOURCES);
-            //var sortedSources;
-            var startSpawn;
-            for(var s in Game.spawns ) {
-                startSpawn = s;
-            }
-            var closestSource = Game.spawns[startSpawn].pos.findClosestByPath(FIND_SOURCES);
-            
-            spawner.queueSpawn({memory:{role:'harvester',source:closestSource.id}});
-            spawner.queueSpawn({memory:{role:'transport'}});
-            spawner.queueSpawn({memory:{role:'harvester',source:sources[1].id}});
-            spawner.queueSpawn({memory:{role:'transport'}});
-            spawner.queueSpawn({memory:{role:'transport'}});
-            spawner.queueSpawn({memory:{role:'harvester',source:sources[0].id}});                                                                                                                     
-            spawner.queueSpawn({memory:{role:'harvester',source:sources[1].id}});
-            spawner.queueSpawn({memory:{role:'upgrader'}});
-            
-            // Memory.rooms[Memory.homeRoom].spawnQueue.push({memory: { role:'harvester',source:'5bbcab769099fc012e6338fb'} })
-            // Memory.rooms[Memory.homeRoom].spawnQueue.push({memory: { role:'transport',target:'5bbcab769099fc012e6338f6',targetRoom:'W26N58'} })
-         }
-    // }
-    // catch( problem ) {
-    //     console.log(`main loop initialization: ${problem}`);
-    // }
+        spawner.queueSpawn({memory:{role:'harvester',source:closestSource.id}});
+        spawner.queueSpawn({memory:{role:'transport'}});
+        spawner.queueSpawn({memory:{role:'harvester',source:sources[1].id}});
+        spawner.queueSpawn({memory:{role:'transport'}});
+        spawner.queueSpawn({memory:{role:'transport'}});
+        spawner.queueSpawn({memory:{role:'harvester',source:sources[0].id}});                                                                                                                     
+        spawner.queueSpawn({memory:{role:'harvester',source:sources[1].id}});
+        spawner.queueSpawn({memory:{role:'upgrader'}});
+    }
 
     try {
         /** TOWER CONTROL */
@@ -147,12 +120,7 @@ module.exports.loop = function () {
 
         try {
             if(!creep.spawning) {
-    
-                // homeRoom here used to be commented out and can be found on spawner code.
-                if(!creep.memory.homeRoom) {
-                    creep.memory.homeRoom = Memory.homeRoom;            
-                }
-        
+            
                 if(creep.memory.role == 'harvester') {
                     roleHarvester.run(creep);
                 }
@@ -198,51 +166,12 @@ module.exports.loop = function () {
 }
 
 // commands examples
-// Memory.rooms[Memory.homeRoom].remoteSources.push({id:'5bbcab769099fc012e6338fb',room:'W27N56',x:'',y:''})
-// Memory.rooms[Memory.homeRoom].spawnQueue.push({memory: { role:'harvester',source:'5bbcab769099fc012e6338fb'} })
-// Memory.rooms[Memory.homeRoom].spawnQueue.push({memory: { role:'harvester',source:'5bbcaf299099fc012e63a417',target:'E38N54'} })
-// Memory.rooms[Memory.homeRoom].spawnQueue.push({memory: { role:'transport',target:'5bbcab769099fc012e6338f6',targetRoom:'W26N58'} })
-// Memory.rooms[Memory.homeRoom].spawnQueue.push({memory: { role:'attacker',targetRoom:'W27N56'} })
-// Memory.rooms[Memory.homeRoom].spawnQueue.push({memory: { role:'transport'} })
-// Memory.rooms[Memory.homeRoom].spawnQueue.push({memory: { role:'claimer',targetRoom:''} })
+// Memory.rooms[baseCommon.getOwnedRooms()[0]].remoteSources.push({id:'5bbcab769099fc012e6338fb',room:'W27N56',x:'',y:''})
+// Memory.rooms[baseCommon.getOwnedRooms()[0]].spawnQueue.push({memory: { role:'harvester',source:'5bbcab769099fc012e6338fb'} })
+// Memory.rooms[baseCommon.getOwnedRooms()[0]].spawnQueue.push({memory: { role:'harvester',source:'5bbcaf299099fc012e63a417',target:'E38N54'} })
+// Memory.rooms[baseCommon.getOwnedRooms()[0]].spawnQueue.push({memory: { role:'transport',target:'5bbcab769099fc012e6338f6',targetRoom:'W26N58'} })
+// Memory.rooms[baseCommon.getOwnedRooms()[0]].spawnQueue.push({memory: { role:'attacker',targetRoom:'W27N56'} })
+// Memory.rooms[baseCommon.getOwnedRooms()[0]].spawnQueue.push({memory: { role:'transport'} })
+// Memory.rooms[baseCommon.getOwnedRooms()[0]].spawnQueue.push({memory: { role:'claimer',targetRoom:''} })
 // Game.spawns['Spawn1'].spawnCreep([WORK,WORK,WORK,WORK,WORK,MOVE],"mc1",{memory:{role:'harvester',source:'5bbcab769099fc012e6338fa'}})
 // Game.spawns['Spawn1'].spawnCreep([TOUGH,TOUGH,TOUGH,],"ac1",{memory:{role:'attacker',target:'606893f710cdfaf1e7eae488','targetRoom':'W25N57'}})
-
-// Behaviours i need to understand to make this code work in new games
-// homeRoom attribute for refiller and transporter seems to have to be set manually because its commented out in main.js job loop but none in commands? logic depends on it
-// How are local source set? with manual command above?
-// How are remote source set? I made a command example above to test with, but want to automate this with scouts at some point
-// room names are hardcoded right now, need to find an easy way to remember/know this, but initialized state machine might be answer
-// Dealing with raiders in remote rooms seem manual with manual attacker creep spawn command, need to automate this but have no intel/alert code
-// 
-
-/**
- * Base Development Code Goals
- * 1 - Spawn Container, extension placement, and fast-filler code
- * 2 - S
- */
-
-/**
- * Limitations to deal with asap
- * 0 - base dies at rcl 5 full extentions, something blocked things. when i destroyed 1 ext, refiller spawned correctly
- * 0.1 - When harvesters die, i must prioritize the one with the closest to base to be respawned next, not just any one.
- * 1 - When transports die, the harvesters they serviced still believe with transportCoverage that they have enough
- * 2 - Soon as a storage is built, base died, for same reason it died when i built containers and made things fill it. Have to spawn refiller asap when storage is built.
- * 3 - Fall-back behaviour for roles that are too dependent on developed bases or areas
- * 4 - Basic Defense of main room
- * 5 - Automatic handling of raiders in remote rooms and prioritizing spawning of attacker to deal with it first
- * 6 - Don't call variables in memory directly from roles etc. but rather implement statemachine that can ensure they're initialized and valid before being accessed.
- * 7 - assuming some values e.g. carry capacity for calculations updated already but should use constants not hard values to make code reusable for different worlds
- * 8 - Need to calculate how much decay happens in a room so i can calculate how much repairer work I can do
- *  */ 
-
-// IDEAS
-// calculator util to optimize planning and decision-making of objects and actions in the game
-
-// warden system - each room has warden object that links like network to base through each other and keeps logic for handling threats and intel
-// - remembering hostile position when blinded
-// - scout logic to expand warden network
-// - reserve logic for remote rooms
-// - preserve logic for creep flight and renewal
-// - maintenance logic for roads etc
-// - base defense logic for owned rooms eg rampart and wall maintenance, towers logic

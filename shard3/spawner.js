@@ -1,6 +1,6 @@
 /**
  * Limitations
- * 
+ * 1 - spawnParms must have memory.homeRoom set otherwise the queueSpawn function won't know which spawn queue to add to and default to first spawn it can find.
  */
 
 /**
@@ -48,28 +48,83 @@
         }
     },
     
-    //TODO this is the wrong way to get homeroom, from creep parms, should be more rational because multiple bases etc.
-    queueSpawn: function(parms) {
-        if( !Memory.rooms[Memory.homeRoom] ) {
-            Memory.rooms[Memory.homeRoom] = {};
+    /**
+     * Adds spawn request to specified room's spawn queue
+     * @param {@Object} parms 
+     * @param {string} spawnRoom 
+     */
+    queueSpawn: function(parms, spawnRoom = false) {
+
+        //if neither function parms nor spawn parms contain homeRoom to specify which spawn queue to use, default to first owned room we can find.
+        if(!spawnRoom) {
+            spawnRoom = parms.memory.homeRoom;
+            if(!spawnRoom) {
+                spawnRoom = baseCommon.getOwnedRooms()[0];
+            }
         }
-        if( !Memory.rooms[Memory.homeRoom].spawnQueue ) {
-            Memory.rooms[Memory.homeRoom].spawnQueue = []
+
+        /** get a harvester into function, existing queue looks like this;
+         * [0] - upgrader
+         * [1] - transport
+         * [2] - repairer
+         * [3] - claimer
+         * [4] - refiller
+         */
+
+        //initialize spawnQueue for room if variable was undefined
+        if( !Memory.rooms[spawnRoom].spawnQueue ) {
+            Memory.rooms[spawnRoom].spawnQueue = []
         }
-        
-        //TODO i don't think roadworkers should be prioritized, rest makes sense e.g. spawning ability and defense
-        if(parms.memory.role == 'refiller' || parms.memory.role == 'attacker'|| parms.memory.role == 'claimer') {
+
+        var spawnQueue = Memory.rooms[spawnRoom].spawnQueue;
+        for(const i = (spawnQueue.length-1); i > 0; i-- ) {
+            let queuedSpawnRequest = spawnQueue[i]; //queuedSpawnRequest is the whole parms json object
+            if( this.getSpawnPriority(queuedSpawnRequest.memory.role) > this.getSpawnPriority(parms.memory.role) ) {
+                Memory.rooms[spawnRoom].spawnQueue.splice(i,0,parms);
+                return;
+            }
+        }
+
+        //if we get to this point, it means we didn't splice it into spawnQueue and did early return, so it has to go to back of queue;
+        Memory.rooms[spawnRoom].spawnQueue.splice(0,0,parms);
+
+        // old code keeping for backup in case above testing fails
+        /*
+        if(parms.memory.role == 'refiller') {
+            Memory.rooms[Memory.homeRoom].spawnQueue.push(parms);
+        }
+        else if(parms.memory.role == 'attacker'|| parms.memory.role == 'claimer') {
             Memory.rooms[Memory.homeRoom].spawnQueue.push(parms);
         }
         else {
             Memory.rooms[Memory.homeRoom].spawnQueue.splice(0,0,parms);
         }
+        */
+    },
+
+    /**
+     * Helper to re-sort spawn queue for more urgent spawns. Lower number is more urgent
+     * @param {string} role 
+     */
+    getSpawnPriority: function(role) {
+        switch(role) {
+            case "refiller": return 1;
+            case "attacker": return 2;
+            case "harvester" : return 3;
+            case "claimer": return 4;
+            default: return 100;
+        }
     },
     
     //TODO this is the wrong way to get homeroom, from creep parms, should be more rational because multiple bases etc.asot
+    /**
+     * 
+     * @param {*} spawnParms 
+     * @returns 
+     */
     getBody: function(spawnParms) {
         try {
-            let homeRoom = Memory.homeRoom;
+            let homeRoom = spawnParms.memory.homeRoom;
             if(!homeRoom) {
                 throw "spawner getBody() can't get homeRoom from spawnParms to measure energyCapacityAvailable";
             }
@@ -406,7 +461,7 @@
             // BODYPART_COST
         }
         catch( problem ) {
-            console.log(`spawner.getBodyCost couldn't get role from spawnParms: ${JSON.stringify(problem)}'`);
+            console.log(`Exception spawner.getBodyCost couldn't get role from spawnParms: ${problem.name}: ${JSON.stringify(problem.message)} ${problem.stack}  `);
         }
     }
 }

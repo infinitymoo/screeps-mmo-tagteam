@@ -129,35 +129,43 @@ var roleTransport = {
             var target = Game.getObjectById(creep.memory.target);
 
             //if we can't get a valid target from memory, it means we have to re-assign a new one.
-            if(!target) {
-                delete creep.memory.target; //cleanup dead or non-existing target id reference;
-                var candidateTargets = [];
-                for( var i in Game.creeps ) {
-                    if( Game.creeps[i].memory.role == "harvester" ) {
-                        let transportCoverageRetrieved = roleHarvester.getTransportCoverage(Game.creeps[i]);
-                        if( (transportCoverageRetrieved > -1) && (transportCoverageRetrieved < 1) && !Game.creeps[i].spawning ) {
-                            candidateTargets.push(Game.creeps[i].id);
+            try {
+                if(!target) {
+                    delete creep.memory.target; //cleanup dead or non-existing target id reference;
+                    var candidateTargets = [];
+                    for( var i in Game.creeps ) {
+                        if( Game.creeps[i].memory.role == "harvester" ) {
+                            let transportCoverageRetrieved = roleHarvester.getTransportCoverage(Game.creeps[i]);
+                            if( (transportCoverageRetrieved > -1) && (transportCoverageRetrieved < 1) && !Game.creeps[i].spawning ) {
+                                candidateTargets.push(Game.creeps[i].id);
+                            }
                         }
                     }
+                    
+                    console.log("transport candidates: "+JSON.stringify(candidateTargets));
+
+                    if(candidateTargets[0]) {
+                        //calculate transportcoverage and update the target harvester's coverage
+                        let harvesterCreep = Game.getObjectById(candidateTargets[0]);
+                        console.log("transport candidates harvesterCreep: "+JSON.stringify(harvesterCreep));
+                        let baseRange = roleHarvester.getBaseRange(harvesterCreep);
+                        console.log("transport candidates baseRange: "+JSON.stringify(baseRange));
+                        let transportCoverage = this.calcTransportCoverage(creep,harvesterCreep,baseRange);
+                        console.log("transport candidates transportCoverage: "+JSON.stringify(transportCoverage));
+
+                        //console.log(`transport ${creep.id} returned calcTransportCoverage of ${transportCoverage} for ${baseRange}`);
+
+                        roleHarvester.setTransportCoverage(harvesterCreep,creep.id,transportCoverage);
+
+                        //console.log(`transport ${creep.id} setting target ${candidateTargets[0].id}`)
+
+                        creep.memory.target = harvesterCreep.id;
+                        target = Game.getObjectById(creep.memory.target);
+                    }
                 }
-                
-                console.log("transport candidates: "+JSON.stringify(candidateTargets));
-
-                if(candidateTargets[0]) {
-                    //calculate transportcoverage and update the target harvester's coverage
-                    let harvesterCreep = Game.getObjectById(candidateTargets[0]);
-                    let baseRange = roleHarvester.getBaseRange(harvesterCreep);
-                    let transportCoverage = this.calcTransportCoverage(creep,harvesterCreep,baseRange);
-
-                    //console.log(`transport ${creep.id} returned calcTransportCoverage of ${transportCoverage} for ${baseRange}`);
-
-                    roleHarvester.setTransportCoverage(harvesterCreep,creep.id,transportCoverage);
-
-                    //console.log(`transport ${creep.id} setting target ${candidateTargets[0].id}`)
-
-                    creep.memory.target = harvesterCreep.id;
-                    target = creep.memory.target;
-                }
+            }
+            catch(problem) {
+                console.log("Excpetion in role.transport getting candidateTargets: "+ problem.name + ": " + problem.message + " " + problem.stack);
             }
             
             if(target) {

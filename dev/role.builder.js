@@ -21,9 +21,10 @@ var roleBuilder = {
                 let target = Game.getObjectById(targetLock);
                 
                 if(!target) {
-                    var buildSites = Game.rooms[creep.room.name].find(FIND_CONSTRUCTION_SITES);
-                    if(buildSites.length > 0) {
-                        targetLock = buildSites[0].id;
+                    var buildSite = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
+                
+                    if(buildSite) {
+                        targetLock = buildSite.id;
                         target = Game.getObjectById(targetLock);
                         
                         creep.memory.targetLock = targetLock;

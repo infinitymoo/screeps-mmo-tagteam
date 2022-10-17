@@ -42,8 +42,8 @@ var roleAttacker = {
                 let result = creep.travelTo(creep.room.controller,{range:2,swampCost:1,reusePath:10});
             }
         }
-        catch {
-            console.log('role.attacker threw exception: '+creep.Namespace);
+        catch (problem) {
+            console.log(`Exception thrown role.attacker: ${problem.name}: ${problem.message} ${problem.stack}  `);
         }
     }
 };

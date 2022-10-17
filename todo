@@ -1,1 +1,41 @@
-test 1 2
+
+
+// Behaviours i need to understand to make this code work in new games
+// homeRoom attribute for refiller and transporter seems to have to be set manually because its commented out in main.js job loop but none in commands? logic depends on it
+// How are local source set? with manual command above?
+// How are remote source set? I made a command example above to test with, but want to automate this with scouts at some point
+// room names are hardcoded right now, need to find an easy way to remember/know this, but initialized state machine might be answer
+// Dealing with raiders in remote rooms seem manual with manual attacker creep spawn command, need to automate this but have no intel/alert code
+// 
+
+/**
+ * Base Development Code Goals
+ * 1 - Spawn Container, extension placement, and fast-filler code
+ * 2 - S
+ */
+
+/**
+ * Limitations to deal with asap
+ * 0 - base dies at rcl 5 full extentions, something blocked things. when i destroyed 1 ext, refiller spawned correctly
+ * 0.01 - transports throwing exceptions with candidate targets sometimes and no info on exception thrown but it breaks when assigning harvesters - why?!
+ * 0.1 - When harvesters die, i must prioritize the one with the closest to base to be respawned next, not just any one.
+ * 1 - When transports die, the harvesters they serviced still believe with transportCoverage that they have enough
+ * 2 - Soon as a storage is built, base died, for same reason it died when i built containers and made things fill it. Have to spawn refiller asap when storage is built.
+ * 3 - Fall-back behaviour for roles that are too dependent on developed bases or areas
+ * 4 - Basic Defense of main room
+ * 5 - Automatic handling of raiders in remote rooms and prioritizing spawning of attacker to deal with it first
+ * 6 - Don't call variables in memory directly from roles etc. but rather implement statemachine that can ensure they're initialized and valid before being accessed.
+ * 7 - assuming some values e.g. carry capacity for calculations updated already but should use constants not hard values to make code reusable for different worlds
+ * 8 - Need to calculate how much decay happens in a room so i can calculate how much repairer work I can do
+ *  */ 
+
+// IDEAS
+// calculator util to optimize planning and decision-making of objects and actions in the game
+
+// warden system - each room has warden object that links like network to base through each other and keeps logic for handling threats and intel
+// - remembering hostile position when blinded
+// - scout logic to expand warden network
+// - reserve logic for remote rooms
+// - preserve logic for creep flight and renewal
+// - maintenance logic for roads etc
+// - base defense logic for owned rooms eg rampart and wall maintenance, towers logic
