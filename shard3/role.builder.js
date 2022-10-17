@@ -19,17 +19,11 @@ var roleBuilder = {
                 let targetRoom = creep.memory.targetRoom;
                 let targetLock = creep.memory.targetLock;
                 let target = Game.getObjectById(targetLock);
-                
-                if(!target) {
-                    var buildSite = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
-                
-                    if(buildSite) {
-                        targetLock = buildSite.id;
-                        target = Game.getObjectById(targetLock);
-                        
-                        creep.memory.targetLock = targetLock;
-                        creep.memory.targetRoom = target.room.name;
-                    }
+
+                //clear target if its not in the room we need to be in just in case we get assigned a target outside of our target area
+                if(target && target.room.name != targetRoom) {
+                    delete creep.memory.targetLock;
+                    target = false;
                 }
 
                 if(!targetRoom) {
@@ -40,7 +34,7 @@ var roleBuilder = {
                     }
                 }
                         
-                if(target) {
+                if(target && targetRoom && (creep.room.name == targetRoom)) {
                     var result = creep.build(target);
 
                     try {
@@ -62,18 +56,33 @@ var roleBuilder = {
                     
                     return;
                 }
-                else if(creep.room.name != targetRoom) {
+                else if(targetRoom && (creep.room.name != targetRoom)) {
                     var destRoom = new RoomPosition(25,25,targetRoom);
                     creep.travelTo(destRoom, {ignoreCreeps:false,swampCost:1,range:1,maxRooms:4});
+
                     return;
                 }
                 //no targets set and we're in same room as we think we should be, so look for sites to build
                 else {
+                
+                    if(!target) {
+                        var buildSite = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
+                    
+                        if(buildSite) {
+                            targetLock = buildSite.id;
+                            target = Game.getObjectById(targetLock);
+                            
+                            creep.memory.targetLock = targetLock;
+                            creep.memory.targetRoom = target.room.name;
+                        }
+                    }
+                    /*
                     var buildSites = Game.rooms[creep.room.name].find(FIND_CONSTRUCTION_SITES);
                     if(buildSites.length > 0) {
                         target = buildSites[0];
                         creep.memory.target = target;
                     }
+                    */
                 }
                 
                 //defaulting behaviour

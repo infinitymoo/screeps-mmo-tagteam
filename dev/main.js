@@ -1,3 +1,4 @@
+var Traveler = require('Traveler');
 var taskCommon = require('task.common');
 var baseCommon = require('base.common');
 
@@ -10,8 +11,6 @@ var roleAttacker = require('role.attacker');
 var roleRefiller = require('role.refiller');
 var roleClaimer = require('role.claimer');
 var roleBreaker = require('role.breaker');
-var Traveler = require('Traveler');
-var spawner = require('spawner');
 
 module.exports.loop = function () {
   
@@ -107,12 +106,10 @@ module.exports.loop = function () {
     }
     
     try {
-        for(var spawn in Game.spawns) {
-            spawner.run(Game.spawns[spawn]);
-        }
+        baseCommon.run();
     }
     catch( problem ) {
-        console.log(`Exception thrown main loop spawner runner section: ${problem.name}: ${problem.message} ${problem.stack}  `);
+        console.log(`Exception thrown main loop basCommon section: ${problem.name}: ${problem.message} ${problem.stack}  `);
     }
     
     for(var name in Game.creeps) {

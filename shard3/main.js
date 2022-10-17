@@ -1,3 +1,4 @@
+var Traveler = require('Traveler');
 var taskCommon = require('task.common');
 var baseCommon = require('base.common');
 
@@ -10,8 +11,6 @@ var roleAttacker = require('role.attacker');
 var roleRefiller = require('role.refiller');
 var roleClaimer = require('role.claimer');
 var roleBreaker = require('role.breaker');
-var Traveler = require('Traveler');
-var spawner = require('spawner');
 
 module.exports.loop = function () {
   
@@ -107,12 +106,10 @@ module.exports.loop = function () {
     }
     
     try {
-        for(var spawn in Game.spawns) {
-            spawner.run(Game.spawns[spawn]);
-        }
+        baseCommon.run();
     }
     catch( problem ) {
-        console.log(`Exception thrown main loop spawner runner section: ${problem.name}: ${problem.message} ${problem.stack}  `);
+        console.log(`Exception thrown main loop basCommon section: ${problem.name}: ${problem.message} ${problem.stack}  `);
     }
     
     for(var name in Game.creeps) {
@@ -168,7 +165,6 @@ module.exports.loop = function () {
 // commands examples
 // Memory.rooms[baseCommon.getOwnedRooms()[0]].remoteSources.push({id:'5bbcab769099fc012e6338fb',room:'W27N56',x:'',y:''})
 // Memory.rooms[baseCommon.getOwnedRooms()[0]].spawnQueue.push({memory: { role:'harvester',source:'5bbcab769099fc012e6338fb'} })
-// Memory.rooms[baseCommon.getOwnedRooms()[0]].spawnQueue.push({memory: { role:'harvester',source:'5bbcaf299099fc012e63a417',target:'E38N54'} })
 // Memory.rooms[baseCommon.getOwnedRooms()[0]].spawnQueue.push({memory: { role:'transport',target:'5bbcab769099fc012e6338f6',targetRoom:'W26N58'} })
 // Memory.rooms[baseCommon.getOwnedRooms()[0]].spawnQueue.push({memory: { role:'attacker',targetRoom:'W27N56'} })
 // Memory.rooms[baseCommon.getOwnedRooms()[0]].spawnQueue.push({memory: { role:'transport'} })
