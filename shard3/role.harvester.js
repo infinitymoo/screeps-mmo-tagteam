@@ -32,7 +32,7 @@ var roleHarvester = {
             //TODO - i have vision of rooms so will know sources sometimes, i think it expires cache then triggers below eventually, but its stuck for many ticks at first
             if(!source) {
                 //determine if remote before finding sources
-                _.forEach( Memory.rooms[Memory.homeRoom].remoteSources, (remoteSource) => {
+                _.forEach( Memory.rooms[creep.memory.homeRoom].remoteSources, (remoteSource) => {
                     if(remoteSource.id == creep.memory.source) {
                         var source = Game.getObjectById(creep.memory.source);
                         if( source )
@@ -186,7 +186,7 @@ var roleHarvester = {
         }
         catch(e) {
             //this works fine so commenting out the log spam - it just moves to remote room for now, TODO should change to x y json asap
-            //console.log("Exception thrown: harvester getBaseRange can't get creep's source position probably because its blind. Returning -1");
+            console.log("Exception thrown: harvester getBaseRange can't get creep's source position probably because its blind. Returning -1");
             return -1;
         }
 

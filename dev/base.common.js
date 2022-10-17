@@ -1,4 +1,6 @@
 
+var spawner = require('spawner');
+
 /**
  * Utility and common functions regarding base management
  */

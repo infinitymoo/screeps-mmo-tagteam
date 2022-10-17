@@ -52,9 +52,8 @@
      * Adds spawn request to specified room's spawn queue
      * @param {@Object} parms 
      * @param {string} spawnRoom 
-     * @returns {boolean}
      */
-    queueSpawn: function(parms, spawnRoom = false) {
+    queueSpawn: function(parms, spawnRoom = 'E38N53') {
 
         //if neither function parms nor spawn parms contain homeRoom to specify which spawn queue to use, default to first owned room we can find.
         if(!spawnRoom) {
@@ -73,22 +72,24 @@
          */
 
         //initialize spawnQueue for room if variable was undefined
+        if( !Memory.rooms[spawnRoom] ) {
+            Memory.rooms[spawnRoom] = {};
+        }
         if( !Memory.rooms[spawnRoom].spawnQueue ) {
             Memory.rooms[spawnRoom].spawnQueue = []
         }
 
         var spawnQueue = Memory.rooms[spawnRoom].spawnQueue;
-        for(const i = (spawnQueue.length-1); i > 0; i-- ) {
+        for(let i = (spawnQueue.length-1); i > 0; i-- ) {
             let queuedSpawnRequest = spawnQueue[i]; //queuedSpawnRequest is the whole parms json object
             if( this.getSpawnPriority(queuedSpawnRequest.memory.role) > this.getSpawnPriority(parms.memory.role) ) {
                 Memory.rooms[spawnRoom].spawnQueue.splice(i,0,parms);
-                return true;
+                return;
             }
         }
 
         //if we get to this point, it means we didn't splice it into spawnQueue and did early return, so it has to go to back of queue;
         Memory.rooms[spawnRoom].spawnQueue.splice(0,0,parms);
-        return true;
 
         // old code keeping for backup in case above testing fails
         /*

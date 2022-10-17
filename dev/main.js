@@ -1,3 +1,4 @@
+var taskCommon = require('task.common');
 var baseCommon = require('base.common');
 
 var roleHarvester = require('role.harvester');
@@ -9,7 +10,6 @@ var roleAttacker = require('role.attacker');
 var roleRefiller = require('role.refiller');
 var roleClaimer = require('role.claimer');
 var roleBreaker = require('role.breaker');
-var taskCommon = require('task.common');
 var Traveler = require('Traveler');
 var spawner = require('spawner');
 
@@ -168,10 +168,10 @@ module.exports.loop = function () {
 // commands examples
 // Memory.rooms[baseCommon.getOwnedRooms()[0]].remoteSources.push({id:'5bbcab769099fc012e6338fb',room:'W27N56',x:'',y:''})
 // Memory.rooms[baseCommon.getOwnedRooms()[0]].spawnQueue.push({memory: { role:'harvester',source:'5bbcab769099fc012e6338fb'} })
-// Memory.rooms[baseCommon.getOwnedRooms()[0]].spawnQueue.push({memory: { role:'harvester',source:'5bbcaf299099fc012e63a417',target:'E38N54'} })
 // Memory.rooms[baseCommon.getOwnedRooms()[0]].spawnQueue.push({memory: { role:'transport',target:'5bbcab769099fc012e6338f6',targetRoom:'W26N58'} })
 // Memory.rooms[baseCommon.getOwnedRooms()[0]].spawnQueue.push({memory: { role:'attacker',targetRoom:'W27N56'} })
 // Memory.rooms[baseCommon.getOwnedRooms()[0]].spawnQueue.push({memory: { role:'transport'} })
 // Memory.rooms[baseCommon.getOwnedRooms()[0]].spawnQueue.push({memory: { role:'claimer',targetRoom:''} })
 // Game.spawns['Spawn1'].spawnCreep([WORK,WORK,WORK,WORK,WORK,MOVE],"mc1",{memory:{role:'harvester',source:'5bbcab769099fc012e6338fa'}})
 // Game.spawns['Spawn1'].spawnCreep([TOUGH,TOUGH,TOUGH,],"ac1",{memory:{role:'attacker',target:'606893f710cdfaf1e7eae488','targetRoom':'W25N57'}})
+// Game.spawns['Spawn1'].spawnCreep([CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,],"refiller1",{memory:{role:'refiller'}})
