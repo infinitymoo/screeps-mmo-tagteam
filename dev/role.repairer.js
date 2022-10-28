@@ -37,7 +37,7 @@ var roleRepairer = {
             
             var targets = creep.room.find(FIND_STRUCTURES, {
                 filter: (structure) => {
-                    return (structure.hits < structure.hitsMax) &&
+                    return (structure.hits < (structure.hitsMax - 2000 )) &&
                         structure.hits < 300000;
                 }});
 
@@ -70,7 +70,7 @@ var roleRepairer = {
             
             targets = creep.room.find(FIND_STRUCTURES, {
                 filter: (structure) => {
-                    return (structure.hits < ( structure.hitsMax - 1000 )) && // the -1000 modifier is to allow things like walls etc to be built up when roads etc are in relatively good condition
+                    return (structure.hits < ( structure.hitsMax - 2000 )) && // the -1000 modifier is to allow things like walls etc to be built up when roads etc are in relatively good condition
                         (structure.structureType == STRUCTURE_ROAD ||
                         structure.structureType == STRUCTURE_CONTAINER);
                 }});

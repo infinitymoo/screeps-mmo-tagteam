@@ -1,4 +1,5 @@
 var taskCommon = require('task.common');
+var u = require('util.common');
 
 var roleBuilder = {
 
@@ -7,11 +8,11 @@ var roleBuilder = {
         try {
             if(creep.memory.building && creep.store[RESOURCE_ENERGY] == 0) {
                 creep.memory.building = false;
-                creep.say('🔄 source');
+                creep.say('🔄');
             }
             if((!creep.memory.building && creep.store[RESOURCE_ENERGY] != 0) && (!creep.memory.hasHarvested || creep.memory.hasHarvested == 0 || creep.store.getFreeCapacity() == 0)) {
                 creep.memory.building = true;
-                creep.say('🚧 build');
+                creep.say('🚧');
             }
     
             if(creep.memory.building) {
@@ -54,11 +55,13 @@ var roleBuilder = {
                         console.log(`Exception builder: ${problem.name}: ${problem.message} ${problem.stack}  `);
                     }
                     
-                    return;
+                    //this check prevents getting stuck on room borders if not moving off them with early return
+                    if(target && target.room.name == creep.room.name)
+                        return;
                 }
                 else if(targetRoom && (creep.room.name != targetRoom)) {
                     var destRoom = new RoomPosition(25,25,targetRoom);
-                    creep.travelTo(destRoom, {ignoreCreeps:false,swampCost:1,range:1,maxRooms:4});
+                    creep.travelTo(destRoom, {ignoreCreeps:false,swampCost:1,range:10,maxRooms:4});
 
                     return;
                 }
@@ -87,61 +90,49 @@ var roleBuilder = {
                 
                 //defaulting behaviour
                 if(!target) {
+
                     this.doRepair(creep);
                 }
                 
             }
             else { //TODO roadworkers sometimes get stuck on room edges sometimes no idea how/why, must still debug that.
+
+                var source = taskCommon.getClosestEnergy(creep);
+                var collectionMethod;
+
+                if(source instanceof Structure)
+                    collectionMethod = "structure";
+                else
+                    collectionMethod = "source";
                 
-                if(!creep.room.storage) {
-
-                    var source = taskCommon.getClosestEnergySource(creep);
-                    var collectionMethod;
-
-                    if(source instanceof Structure)
-                        collectionMethod = "structure";
+                if(source) {                        
+                    var result;
+                    if(collectionMethod == "structure")
+                        result = creep.withdraw(source,RESOURCE_ENERGY);
                     else
-                        collectionMethod = "source";
-                    
-                    if(source) {                        
-                        var result;
-                        if(collectionMethod == "structure")
-                            result = creep.withdraw(source,RESOURCE_ENERGY);
-                        else
-                            result = creep.pickup(source);
-                        
-                        if(result == ERR_NOT_IN_RANGE) {
-                            creep.travelTo(source,{ignoreCreeps: false,range:1,maxRooms:1,reusePath:8});
-                        }
-                        return;
-                    }
-                    else {
-                        source = creep.pos.findClosestByRange(FIND_SOURCES);
-                        var harvestResult = creep.harvest(source);
-                        if( harvestResult == ERR_NOT_IN_RANGE) {
-                            creep.travelTo(source, {ignoreCreeps: false,range:1,maxRooms:1,reusePath:8});
-                        }
-                        if( harvestResult == OK ) { // TODO calc harvest count to fill dont hardcode
-                            if(creep.memory.hasHarvested && creep.memory.hasHarvested > 0) {
-                                creep.memory.hasHarvested--;
-                            }
-                            else {
-                                let capacity = creep.store.getFreeCapacity();
-                                let workParts = _.filter(creep.body, function(b) {return b.type == WORK});
-                                let harvestRate = workParts.length*2;
-                                creep.memory.hasHarvested = capacity/(harvestRate*2);
-                            }
-                        }
-                    }
-                
-                }
-                else {
-                    var source = creep.room.storage;
-                    
-                    var result = creep.withdraw(source,RESOURCE_ENERGY);
+                        result = creep.pickup(source);
                     
                     if(result == ERR_NOT_IN_RANGE) {
+                        creep.travelTo(source,{ignoreCreeps: false,range:1,maxRooms:1,reusePath:8});
+                    }
+                    return;
+                }
+                else {
+                    source = creep.pos.findClosestByRange(FIND_SOURCES);
+                    var harvestResult = creep.harvest(source);
+                    if( harvestResult == ERR_NOT_IN_RANGE) {
                         creep.travelTo(source, {ignoreCreeps: false,range:1,maxRooms:1,reusePath:8});
+                    }
+                    if( harvestResult == OK ) { // TODO calc harvest count to fill dont hardcode
+                        if(creep.memory.hasHarvested && creep.memory.hasHarvested > 0) {
+                            creep.memory.hasHarvested--;
+                        }
+                        else {
+                            let capacity = creep.store.getFreeCapacity();
+                            let workParts = _.filter(creep.body, function(b) {return b.type == WORK});
+                            let harvestRate = workParts.length*2;
+                            creep.memory.hasHarvested = capacity/(harvestRate*2);
+                        }
                     }
                 }
             }
@@ -154,54 +145,100 @@ var roleBuilder = {
     //TODO needs optimization badly
     /** @param {Creep} creep **/
     doRepair: function(creep) {
-        var targets = creep.room.find(FIND_MY_STRUCTURES, {
+        var result;
+        let target = Game.getObjectById(creep.memory.target);
+
+        if(target && target.structureType == STRUCTURE_RAMPART && target.hits < 300000) {
+            if(creep.pos.isNearTo(target)) {
+                result = creep.repair(target);
+                //this check prevents getting stuck on room borders if not moving off them with early return
+                if(target && target.room.name == creep.room.name)
+                    if(result == OK)
+                        return;
+                if(result == ERR_NOT_IN_RANGE)
+                    creep.travelTo(targets[0], {ignoreCreeps: false,range:3,maxRooms:1});
+            }
+        }
+
+        //if anything like roads or walls repairable in range on way to walking to target, repair it
+        var targets = creep.room.find(FIND_STRUCTURES, {
             filter: (structure) => {
-                return (structure.hits < structure.hitsMax) &&
+                return (structure.hits < structure.hitsMax) && 
+                structure.structureType == STRUCTURE_RAMPART &&
                     structure.hits < 300000;
             }});
+
+        if(targets.length > 0) {
+            if(creep.pos.isNearTo(targets[0])) {
+                result = creep.repair(targets[0]);
+                //this check prevents getting stuck on room borders if not moving off them with early return
+                if(target && target.room.name == creep.room.name)
+                    if(result == OK)
+                        return;
+            }
+        }
+        
+        if(targets.length > 0 && (!target || target.hits == target.hitsMax || target.hits > 300000)) {
+            creep.memory.target = targets[0].id;
+            target = Game.getObjectById(creep.memory.target);
+        }
+
+        if(target && ( target.hits >= 300000 || target.hits == target.hitsMax )) {
+            target = false;
+            delete creep.memory.target;
+        }
             
-        if(targets[0]) {
-            if(creep.repair(targets[0]) == ERR_NOT_IN_RANGE) {
-                creep.travelTo(targets[0], {ignoreCreeps: false,range:3,maxRooms:1});
+        if(target) {            
+            result = creep.repair(target);
+            if(result == ERR_NOT_IN_RANGE) {
+                creep.travelTo(target, {ignoreCreeps: false,range:3,maxRooms:1});
+                return;
             }
-            return; //early return if i could do this, toa void running below code
+            //this check prevents getting stuck on room borders if not moving off them with early return
+            if(target && target.room.name == creep.room.name)
+                if(result == OK)
+                    return; //early return if i could do this, toa void running below code
         }
         
         targets = creep.room.find(FIND_STRUCTURES, {
             filter: (structure) => {
-                return (structure.hits < structure.hitsMax) &&
-                    (structure.structureType == STRUCTURE_ROAD ||
-                    structure.structureType == STRUCTURE_CONTAINER);
+                return (structure.hits < structure.hitsMax) && 
+                    structure.hits < 300000;
             }});
-        
-        if(targets[0]) {
-            if(creep.repair(targets[0]) == ERR_NOT_IN_RANGE) {
-                let cpu = Game.cpu.getUsed();
-                creep.moveTo(targets[0],{range:3});
-                let cpuUsed = Game.cpu.getUsed() - cpu;
-                let delta = _.round(cpuUsed);
-                if (delta > 500) {
-                    // see note at end of file for more info on this
-                    console.log(`DEFAULT MOVING: heavy cpu use: ${creep.name}, cpu: ${state.cpu} origin: ${creep.pos}, dest: ${destination}`);
-                }
-                
-                //creep.travelTo(targets[0], {ignoreCreeps: false,range:3,maxRooms:1}); //seems i get a lot of high cpu use here
+
+        //do same as above for any non-rampart structures
+        if(targets.length > 0) {
+            if(creep.pos.isNearTo(targets[0])) {
+                result = creep.repair(targets[0]);
+                //this check prevents getting stuck on room borders if not moving off them with early return
+                if(target && target.room.name == creep.room.name)
+                    if(result == OK)
+                        return;
             }
-            return; //early return if i could do this, toa void running below code
         }
-        
-        targets = creep.room.find(FIND_STRUCTURES, {
-            filter: (structure) => {
-                return (structure.hits < structure.hitsMax) &&
-                    structure.structureType == STRUCTURE_RAMPART &&
-                    structure.hits < 2000000;
-            }});
-        
-        if(targets[0]) {
-            if(creep.repair(targets[0]) == ERR_NOT_IN_RANGE) {
-                creep.moveTo(targets[0],{ignoreCreeps: false,range:3,maxRooms:1});
+
+        // u.debug(target,`builder debug 1`);
+        // u.debug(targets.length,`builder debug 1.1`);
+        // u.debug(!target,`builder debug 1.2`);
+        // u.debug((target.hits == target.hitsMax),`builder debug 1.3`);
+        // u.debug(target.hits,`builder debug 1.4`);
+            
+        if(targets.length > 0 && (!target || target.hits == target.hitsMax || target.hits > 300000)) {
+            // u.debug(targets,`builder debug 2.1`)
+            creep.memory.target = targets[0].id;
+            target = Game.getObjectById(creep.memory.target);
+        }
+            
+        if(target) {
+            result = creep.repair(target);
+            if(result == ERR_NOT_IN_RANGE) {
+                creep.travelTo(target, {ignoreCreeps: false,range:3,maxRooms:1});
+                return;
             }
-            return; //early return if i could do this, toa void running below code
+            //this check prevents getting stuck on room borders if not moving off them with early return
+            if(target && target.room.name == creep.room.name)
+                if(result == OK)
+                    return; //early return if i could do this, toa void running below code
         }
         
         if(creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {

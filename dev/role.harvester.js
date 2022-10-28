@@ -1,4 +1,5 @@
 var Traveler = require('Traveler');
+var u = require('util.common');
 
 /** Limitations
  * 1 - TO TEST check to see what harvester does at every RCL / base development level with its behaviour to make sure its robust
@@ -106,25 +107,59 @@ var roleHarvester = {
                 var result = creep.travelTo(destRoom, {visualizePathStyle: {stroke: '#ffffff'}});
             }
             else {
-
+                let result;
                 if(creep.memory.tempTarget) {
                     this.gotoTempTarget(creep);
                     return;
                 }
 
+                let link;
+                if(creep.memory.link) {
+                    link = Game.getObjectById(creep.memory.link);
+                    if(creep.memory.transportList) {
+                        this.clearLinkedTransports(creep);
+                        creep.memory.transportCoverage = -1; //-1 is handled as a flag not to process transport validation and re-setup transportData
+                    }
+                }
+
+                if(!link) {
+                    this.assignLink(creep)
+                    if(creep.memory.link) {
+                        link = Game.getObjectById(creep.memory.link);
+                        this.clearLinkedTransports(creep);
+                        creep.memory.transportCoverage = -1; //-1 is handled as a flag not to process transport validation and re-setup transportData
+                    }
+                }
+
+                if(link && (link.store.getFreeCapacity(RESOURCE_ENERGY) > 50) ) {
+                    creep.transfer(link,RESOURCE_ENERGY);
+                    return;
+                }
+
                 //TODO must handle this in statemachine as its expensive every tick - also check initializer check for transport presence in home room
                 //check if we have transports before dropping on floor at source
-                let transports = _.filter( Game.creeps, (creep) => {
-                    return creep.memory.role == "transport"
+                let transports = _.filter( Game.creeps, (c) => {
+                    return c.memory.role == "transport"
                 });
 
                 if( transports && transports.length > 0 ) {
+                    for(var i=0;i<transports.length;i++) {
+                        if(creep.pos.isNearTo(transports[i])) {
+                            result = transports[i].withdraw(creep,RESOURCE_ENERGY);
+                            if(result == OK) {
+                                let source = Game.getObjectById(creep.memory.source);
+                                result = creep.harvest(source);
+                                if(result == OK) {
+                                    return;
+                                }
+                            }
+                        }
+                    }
                     creep.drop(RESOURCE_ENERGY);
                     return;
                 }
 
                 //if no transports, we must deliver to spawn sources
-                var target;
                 var targets = creep.room.find(FIND_STRUCTURES, {
                     filter: (structure) => {
                         return (structure.structureType == STRUCTURE_EXTENSION ||
@@ -212,8 +247,14 @@ var roleHarvester = {
 
     /** @param {Creep} creep **/
     getTransportCoverage: function(harvesterCreep) {
+        
+        //this is a flag to prevent processing rest of function e.g. harvester as Link structure or not valid transport target for other reason.
+        if(harvesterCreep.memory.transportCoverage && harvesterCreep.memory.transportCoverage == -1 ) {
+            return -1;
+        }
+
         //console.log(`getTransportCoverage harvester ${harvesterCreep.name} room:${harvesterCreep.room}`);
-        if( !harvesterCreep.memory.transportCoverage || harvesterCreep.memory.transportCoverage < 0 ){
+        if( !harvesterCreep.memory.transportCoverage || harvesterCreep.memory.transportCoverage < 0 ){ // the < 0 is a graceful failsafe incase the above mechanism doesn't work
             harvesterCreep.memory.transportCoverage = 0;
             harvesterCreep.memory.transportList = [];
             //console.log(`getTransportCoverage transportCoverage init 0`);
@@ -278,6 +319,29 @@ var roleHarvester = {
         //console.log(`setTransportCoverage transportRegister ${JSON.stringify(transportRegister)}`);
 
         harvesterCreep.memory.transportList.push(transportRegister);
+    },
+
+    assignLink(creep) {
+        let links = Game.rooms[creep.room.name].find(FIND_MY_STRUCTURES, {
+            filter: (structure) => {
+                return (structure.structureType == STRUCTURE_LINK)
+            }});
+
+        _.forEach( links, (l) => {
+            if(l.pos.isNearTo(creep)) {
+                creep.memory.link = l.id;
+                return false; //breaks lodash foreach
+            }
+        });
+
+    },
+
+    clearLinkedTransports(creep) {
+        _.forEach(creep.memory.transportList, (transportData) => {
+            let transport = Game.getObjectById(transportData.id);
+            delete transport.memory.target;
+        });
+        delete creep.memory.transportList;
     }
 };
 

@@ -1,5 +1,6 @@
 var roleHarvester = require('role.harvester');
 var baseCommon = require('base.common');
+var u = require('util.common');
 
 /** Limitations
  * 1 - creep.memory.target isn't automatically set
@@ -19,32 +20,9 @@ var roleTransport = {
         this.checkTransition(creep);
 
         //drop off
-        if(creep.memory.transport) {
+        if(creep.memory.working) {
             let result = -1000;
-            let target = false;
-
-            //for now set storage as dropoff var target (not memory target)
-            if( Game.rooms[creep.memory.homeRoom].storage ) {
-                target = Game.rooms[creep.memory.homeRoom].storage;
-            }
-            
-            if(target && target.store.getFreeCapacity() > 0) {
-                if(!creep.pos.isNearTo(target) ) {
-                    creep.travelTo(target, {ignoreCreeps: false,range:1,maxRooms:3});
-                }
-                else {
-                    result = creep.transfer(target, RESOURCE_ENERGY); //TODO have to transfer all things not just energy
-                    if( result != OK ) {
-                        console.log(`WARNING: transport creep ${creep.name} couldn't transfer to target while next to it`);
-                    }
-                    else {
-                        creep.memory.transport = false;
-                        creep.travelTo(Game.getObjectById(creep.memory.target), {ignoreCreeps: false,range:1,maxRooms:3});// not same as target around here, but is actual pickup target
-                        return;
-                    }
-                }
-                
-            };            
+            let dropoffTarget = Game.getObjectById(creep.memory.dropoffTarget);
 
             //TODO - must read this off cache instead of keeping to refresh it for every transport.
             var targets = Game.rooms[creep.memory.homeRoom].find(FIND_STRUCTURES, {
@@ -67,6 +45,39 @@ var roleTransport = {
                     }
                 }
             }
+
+            //for now set storage as dropoff var target (not memory target)
+            if( !dropoffTarget ) {
+                if( Game.rooms[creep.memory.homeRoom].storage ) {
+                    creep.memory.dropoffTarget = Game.rooms[creep.memory.homeRoom].storage.id;
+                    dropoffTarget = Game.getObjectById(creep.memory.dropoffTarget);
+                }
+                else if( targets.length > 0 ) {
+                    creep.memory.dropoffTarget = targets[0].id;
+                    dropoffTarget = Game.getObjectById(creep.memory.dropoffTarget);
+                }
+            }
+            
+            if(dropoffTarget && dropoffTarget.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
+                if(!creep.pos.isNearTo(dropoffTarget) ) {
+                    creep.travelTo(dropoffTarget, {ignoreCreeps: false,range:1,maxRooms:3});
+                    return;
+                }
+                else {
+                    result = creep.transfer(dropoffTarget, RESOURCE_ENERGY); //TODO have to transfer all things not just energy
+                    if( result != OK ) {
+                        console.log(`WARNING: transport creep ${creep.name} couldn't transfer to target while next to it`);
+                    }
+                    else {
+                        this.checkTransition(creep);
+                        //if transition successful
+                        if( creep.memory.working == false )
+                            creep.travelTo(Game.getObjectById(creep.memory.target), {ignoreCreeps: false,range:1,maxRooms:3});// not same as target around here, but is actual pickup target
+                        return;
+                    }
+                }
+                
+            }; 
 
             //if we get here, it means none of the early returns happened and we can't drop off energy in structures, so go to controller to feed upgraders.
             
@@ -106,17 +117,19 @@ var roleTransport = {
                         //console.log("transport candidates harvesterCreep: "+JSON.stringify(harvesterCreep));
                         let baseRange = roleHarvester.getBaseRange(harvesterCreep);
                         //console.log("transport candidates baseRange: "+JSON.stringify(baseRange));
-                        let transportCoverage = this.calcTransportCoverage(creep,harvesterCreep,baseRange);
-                        //console.log("transport candidates transportCoverage: "+JSON.stringify(transportCoverage));
+                        if(baseRange > 0) {
+                            let transportCoverage = this.calcTransportCoverage(creep,harvesterCreep,baseRange);
+                            //console.log("transport candidates transportCoverage: "+JSON.stringify(transportCoverage));
 
-                        //console.log(`transport ${creep.id} returned calcTransportCoverage of ${transportCoverage} for ${baseRange}`);
+                            //console.log(`transport ${creep.id} returned calcTransportCoverage of ${transportCoverage} for ${baseRange}`);
 
-                        roleHarvester.setTransportCoverage(harvesterCreep,creep.id,transportCoverage);
+                            roleHarvester.setTransportCoverage(harvesterCreep,creep.id,transportCoverage);
 
-                        //console.log(`transport ${creep.id} setting target ${candidateTargets[0].id}`)
+                            //console.log(`transport ${creep.id} setting target ${candidateTargets[0].id}`)
 
-                        creep.memory.target = harvesterCreep.id;
-                        target = Game.getObjectById(creep.memory.target);
+                            creep.memory.target = harvesterCreep.id;
+                            target = Game.getObjectById(creep.memory.target);
+                        }
                     }
                 }
             }
@@ -127,10 +140,10 @@ var roleTransport = {
             if(target) {
                 var result;
                 //this code starts to look for energy dropped by typically harvesters to pick it up, but swamps screws with 2 range because its slow to travel on them so parm is 4 range.
-                if(creep.pos.inRangeTo(target,1)) { //small swamps can screw up 2 range, so make it 4 before looking for dropped res
+                if(creep.pos.isNearTo(target)) { //small swamps can screw up 2 range, so make it 4 before looking for dropped res
                     var source = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES);
                     
-                    if( source && creep.pos.inRangeTo(source,1) && target.pos.inRangeTo(source,1) ) {
+                    if( source && creep.pos.isNearTo(source) && target.pos.isNearTo(source) ) {
                         result = creep.pickup(source);
                         if( result == ERR_NOT_IN_RANGE) {
                             creep.travelTo(source, {ignoreCreeps: false,range:1,maxRooms:3});
@@ -142,8 +155,10 @@ var roleTransport = {
                     }
                     //if nothing on ground near target, withdraw from creep or tombstone (or ruin?) directly 
                     //TODO withdraw any resource not just energy
-                    else if( !source && target ) {
-                        result = creep.withdraw(Game.getObjectById(creep.memory.target),RESOURCE_ENERGY);
+                    else {
+                        let targetCreep = Game.getObjectById(creep.memory.target);
+                        if( targetCreep.store.getFreeCapacity(RESOURCE_ENERGY) == 0)
+                            result = creep.withdraw(targetCreep,RESOURCE_ENERGY);
                         if( result == ERR_INVALID_TARGET)
                             result = target.transfer(creep,RESOURCE_ENERGY);
                         if( result == ERR_NOT_IN_RANGE) {
@@ -153,16 +168,12 @@ var roleTransport = {
                         if( result == OK ) {
                             return;
                         }
-                        
-                    }
-                    //don't chase dropped resources, stay in milking position.
-                    else {
-                        //targetIsDry = true;
-                        return;
+                        //this is common when a harvester is moving on its way to target and transport is next to it
+                        //throw new Error(`E role.transport next to target but couldn't do anything`);
                     }
                 }
                 else {
-                    result = creep.travelTo(target/*, {ignoreCreeps: false,range:1,maxRooms:1}*/); //small swamps can screw up 2 range, so make it 4 before looking for dropped res
+                    result = creep.travelTo(target); //small swamps can screw up 2 range, so make it 4 before looking for dropped res
                     //console.log(`transport ${creep.name} is trying to move to remote room ${}`);
                     return;
                 }
@@ -211,20 +222,14 @@ var roleTransport = {
      */
     checkTransition: function(creep) {        
         // if empty, switch to sourcing mode
-        if(creep.memory.transport && creep.store[RESOURCE_ENERGY] == 0) {
-            creep.memory.transport = false;
+        if(creep.memory.working && creep.store[RESOURCE_ENERGY] == 0) {
+            creep.memory.working = false;
             creep.say('🧊');
         }
-        // if has energy and was in sourcing mode, go refill
-        else if(!creep.memory.transport &&
-                ((creep.store[RESOURCE_ENERGY] != 0 && //was 
-                (creep.room.name == creep.memory.homeRoom) ) ||    
-
-            (creep.store.getFreeCapacity() == 0 &&
-            (creep.room.name != creep.memory.homeRoom)) )
-            ) {
+        // if is full, go work
+        else if(!creep.memory.working && creep.store.getFreeCapacity() == 0) {
             //TODO check if target alive and if so wait to fill up before going back to give chance to share nearby pickup workload with other harvesters
-            creep.memory.transport = true;
+            creep.memory.working = true;
             creep.say('🍺'); 
         }
     },

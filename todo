@@ -18,44 +18,55 @@ https://github.com/NesCafe62/screeps-pathfinding
 			survey[roomName]: {
 				resourceNode: [{type:string, //energy, powerbank, commodity, mineral - i.e. resource type
 							id:string,
+							timer:number,
 							x:number,
 							y:number}],
-				exitDirections:[up,down,left,right]
+				sourceKeeperNodes[]: {
+							spawnTick:number, //-1 when no spawn tick, positive gametime number when it has active countdown
+							x:number,
+							y:number}
+				}
+				linkedRooms[roomName]: {
+					direction:number,
+					roomName:string
+				}
 			},
 			activity[roomName]: {
-				timestamp:number,
+				Timestamp:number,
 				owner:string,
 				hostileStructures:[Structure],
 				hostileCreeps:[Creep],
 				scavengeTargets[]: {
 					type:string, //tombstone,dropped resource,ruin, etc
+					expiryTick:number, //calculated upon population of gameticks+tickstolive
 					id:string,
 					x:number,
 					y:number
 				}
 			}
 		}
+	1.2 - rooms[] {
+			resourcesNode[]
+		}
 
-1 - Spawnqueue tiered arrays to make sorting and prioritization easier
-	1 - Preservation
-		1.1 - Base Function (e.g. Refillers, Cooker, Repairer)
-		1.2 - Military (e.g. Active Defensive Mission Creep)
-	2 - Generation
-		2.1 - Farm Reservation (e.g. Claimers)
-		2.2 - 
-2 - Sorting of spawn queue with new additions e.g. When harvesters die, i must prioritize the one with the closest to base to be respawned next, not just any one.
 
-- Change Harvester source attribute to target to make task state machine generic
+
+3 - Sorting of spawn queue with new additions e.g. When harvesters die, i must prioritize the one with the closest to base to be respawned next, not just any one.
+
+4 - Targetlock with x and y and room so that i can move to position even if no vision. can check harvesters alive through Game.creeps to clear transport target
 
 - Event , broadcast, subscribe to reduce find, decision checks, etc. e.g. let remote harvest transports finish dropped energy pile from harvester, or
 register invader tomb for scavenge, or call for help or some goal to initiate, or some creep to do something when another braodcasts the right thing. e.g. process newly
 discovered remote source, check if should harvest, and kick off goal/task.
 
-5 - Automatic handling of raiders in remote rooms and prioritizing spawning of attacker to deal with it first
-6 - Don't call variables in memory directly from roles etc. but rather implement statemachine that can ensure they're initialized and valid before being accessed.
-7 - assuming some values e.g. carry capacity for calculations updated already but should use constants not hard values to make code reusable for different worlds
+= State Machine Priority =
+- Change Harvester source attribute to target to make task state machine generic
+- Everything must be in pure functions
+- Don't call variables in memory directly from roles etc. but rather implement statemachine that can ensure they're initialized and valid before being accessed.
 
 = Tactical Priority =
+- Creeps get stuck on room borders when there's logic in their code that makes them NOT move current tick if they're not at target, e.g. intermittent repairing
+- Automatic handling of raiders in remote rooms and prioritizing spawning of attacker to deal with it first
 - Basic Defense of main room
 	. No prioritized tower filler code, can easily empty
 	. Rampart Defense Code
@@ -66,11 +77,17 @@ discovered remote source, check if should harvest, and kick off goal/task.
 	. Calculate Keeper respawns and evade them while having combat creep present effectively
 	. Mineral Mining
 
+- Reserve workspace spots, incl renew spot at spawner and avoid moving there
+- Reserve areas for certain kinds of creep e.g. refillers so that builders don't clog paths.
+
 = Low Priority =
+- cache roads in remote harvesting rooms to easily rebuild if lost for some reason.
 - baseLink automatic setting (near spawn) creep.room.memory.baseLink - currently is manual
 - baseCommon - preserver.decayAudit & sustainRepair mission Need to calculate how much decay happens in a room so i can calculate how much repairer work I can do
 - Tiered behaviour for roles / tasks depending on base development levels and/or creep size levels and/or target areas e.g. upgrader links
-
+- inter-shard-ready code e.g. creep naming generation s[shard#]c[tick]i[random]
+- use game constants to calculate things so that code is compatible between worlds
+- inter-shard friendly code
 
 // IDEAS
 // calculator util to optimize planning and decision-making of objects and actions in the game
@@ -79,6 +96,7 @@ swarmlink system - swarmlink behaviours for different situations, starting with 
 - swarmlink uses game.creep[].pos knowledge to find linkable creeps then groups creeps with same goals to determine which links to make that tick and then e.g. bucket energy
 - different situations like remote harvesting, energy transmission swarm for upgrader or builder fueling or base filling
 - must implement room position reservation system e.g. spawn exit, static refiller station, container delivery station, restricted areas that swarms wont clog
+- combat utility, dynamic formations, surrounding, focus fire targets,
 
 warden system - each room has warden object that links like network to base through each other and keeps logic for handling threats and intel
 - remembering hostile position when blinded

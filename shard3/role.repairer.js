@@ -1,4 +1,6 @@
+var u = require('util.common');
 var taskCommon = require('task.common');
+const { __esModule } = require('./Traveler');
 
 var roleRepairer = {
 
@@ -15,35 +17,113 @@ var roleRepairer = {
         }
 
         if(creep.memory.repairing) {
-            var target = Game.getObjectById(creep.memory.target);
+            var result;
+            let target = Game.getObjectById(creep.memory.target);
+
+            if(!creep.memory.targetRoom) {
+                creep.memory.targetRoom = creep.memory.homeRoom;
+            }
+
+            if(creep.memory.targetRoom && creep.room.name != creep.memory.targetRoom) {
+                creep.travelTo(
+                    new RoomPosition(
+                        25,
+                        25,
+                        creep.memory.targetRoom),
+                    { range:10,
+                    reusePath:10});
+                return;
+            }
             
-            if(target)
-                if((target.hits == target.hitsMax) ||
-                    (target.hits > 10000000))
-                    target = null;
-            
-            if(!target)
-            {
-                var targets = creep.room.find(FIND_STRUCTURES,{
-                    filter: (structure) => {
-                        return (structure.structureType == STRUCTURE_ROAD ||
-                            structure.structureType == STRUCTURE_WALL) &&
-                            (structure.hits < structure.hitsMax) &&
-                            structure.hitsMax < 10000000;
+            var targets = creep.room.find(FIND_STRUCTURES, {
+                filter: (structure) => {
+                    return (structure.hits < (structure.hitsMax - 2000 )) &&
+                        structure.hits < 300000;
+                }});
+
+            if(targets.length > 0 && (!target || target.hits == target.hitsMax || target.hits > 300000)) {
+                creep.memory.target = targets[0].id;
+                target = Game.getObjectById(creep.memory.target);
+            }
+    
+            if(targets.length > 0) {
+                for(var i=0;i<targets.length;i++) {
+                    if(creep.pos.isNearTo(targets[i])) {
+                        result = creep.repair(targets[i]);
+                        //this check prevents getting stuck on room borders if not moving off them with early return
+                        if(target && target.room.name == creep.memory.targetRoom)
+                            if(result == OK)
+                                return;
                     }
-                });
-                if( targets.length > 0) {
-                    creep.memory.target = targets[0].id;
-                    target = targets[0];
                 }
             }
-            if(creep.repair(target) == ERR_NOT_IN_RANGE) {
-                creep.travelTo(target, {visualizePathStyle: {stroke: '#ffffff'}});
+                
+            if(target) {
+                result = creep.repair(target);
+                if(result == ERR_NOT_IN_RANGE) {
+                    creep.travelTo(target, {ignoreCreeps: false,range:3,maxRooms:1});
+                    return;
+                }
+                if(result == OK)
+                    return; //early return if i could do this, toa void running below code
+            }
+            
+            targets = creep.room.find(FIND_STRUCTURES, {
+                filter: (structure) => {
+                    return (structure.hits < ( structure.hitsMax - 2000 )) && // the -1000 modifier is to allow things like walls etc to be built up when roads etc are in relatively good condition
+                        (structure.structureType == STRUCTURE_ROAD ||
+                        structure.structureType == STRUCTURE_CONTAINER);
+                }});
+    
+            if(targets.length > 0 && (!target || target.hits == target.hitsMax)) {
+                creep.memory.target = targets[0].id;
+                target = Game.getObjectById(creep.memory.target);
+            }
+            
+            if(target) {
+                result = creep.repair(target);
+                if(result == ERR_NOT_IN_RANGE) {
+                    creep.travelTo(target, {ignoreCreeps: false,range:3,maxRooms:1});
+                    return;
+                }
+                //this check prevents getting stuck on room borders if not moving off them with early return
+                if(target && target.room.name == creep.room.name)
+                    if(result == OK)
+                        return; //early return if i could do this, toa void running below code
+            }
+            
+            targets = creep.room.find(FIND_STRUCTURES, {
+                filter: (structure) => {
+                    return (structure.hits < structure.hitsMax) &&
+                        (structure.structureType == STRUCTURE_RAMPART ||
+                        structure.structureType == STRUCTURE_WALL) &&
+                        structure.hits < 2000000;
+                }});
+    
+            if(targets.length > 0 && (!target || target.hits == target.hitsMax || target.hits > 2000000)) {
+                creep.memory.target = targets[0].id;
+                target = Game.getObjectById(creep.memory.target);
+            }
+            
+            if(target) {
+                result = creep.repair(target);
+                if(result == ERR_NOT_IN_RANGE) {
+                    creep.travelTo(target, {ignoreCreeps: false,range:3,maxRooms:1});
+                    return;
+                }
+                //this check prevents getting stuck on room borders if not moving off them with early return
+                if(target && target.room.name == creep.room.name)
+                    if(result == OK)
+                        return; //early return if i could do this, toa void running below code
+            }
+            
+            if(creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
+                creep.travelTo(creep.room.controller, {ignoreCreeps: false,range:1,maxRooms:1});
             }
         }
         else {
 
-            var source = taskCommon.getClosestEnergySource(creep);
+            var source = taskCommon.getClosestEnergy(creep);
             var collectionMethod;
 
             if(source instanceof Structure)

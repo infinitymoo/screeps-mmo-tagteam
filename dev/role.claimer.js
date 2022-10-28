@@ -24,7 +24,7 @@ var roleClaimer = {
                     if(controller)
                         result = creep.travelTo(controller);
                     else // just in case but probably never called
-                        result = creep.travelTo(new RoomPosition(25,25,targetRoom),{swampCost:1,range:1});
+                        result = creep.travelTo(new RoomPosition(25,25,targetRoom),{ignorecreeps:true,swampCost:1,range:1});
                     return;
                 }
                 else {

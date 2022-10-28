@@ -143,7 +143,7 @@ var u = require('util.common');
                     
                     //transferred some energy but still not at target
                     if( !creep.pos.isNearTo(target) && (creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) ) {                            
-                        creep.travelTo(target);
+                        creep.travelTo(target, {ignoreCreeps: false,range:1,maxRooms:1,reusePath:10});
                         return;
                     }
 
@@ -153,7 +153,7 @@ var u = require('util.common');
                         this.getNewRefillTarget(creep,targets);
                         target = Game.getObjectById(creep.memory.targetLock);
                         if( !creep.pos.isNearTo(target) && (creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) ) {                            
-                            creep.travelTo(target);
+                            creep.travelTo(target, {ignoreCreeps: false,range:1,maxRooms:1,reusePath:10});
                             return;
                         }
                         return;
