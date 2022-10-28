@@ -1,12 +1,9 @@
-
-
 // Behaviours i need to understand to make this code work in new games
-// homeRoom attribute for refiller and transporter seems to have to be set manually because its commented out in main.js job loop but none in commands? logic depends on it
-// How are local source set? with manual command above?
-// How are remote source set? I made a command example above to test with, but want to automate this with scouts at some point
-// room names are hardcoded right now, need to find an easy way to remember/know this, but initialized state machine might be answer
-// Dealing with raiders in remote rooms seem manual with manual attacker creep spawn command, need to automate this but have no intel/alert code
-// 
+
+
+room names are hardcoded right now, need to find an easy way to remember/know this, but initialized state machine might be answer
+Dealing with raiders in remote rooms seem manual with manual attacker creep spawn command, need to automate this but have no intel/alert code
+https://github.com/NesCafe62/screeps-pathfinding
 
 /**
  * Base Development Code Goals
@@ -14,28 +11,83 @@
  * 2 - S
  */
 
-/**
- * Limitations to deal with asap
- * 0 - base dies at rcl 5 full extentions, something blocked things. when i destroyed 1 ext, refiller spawned correctly
- * 0.01 - transports throwing exceptions with candidate targets sometimes and no info on exception thrown but it breaks when assigning harvesters - why?!
- * 0.1 - When harvesters die, i must prioritize the one with the closest to base to be respawned next, not just any one.
- * 1 - When transports die, the harvesters they serviced still believe with transportCoverage that they have enough
- * 2 - Soon as a storage is built, base died, for same reason it died when i built containers and made things fill it. Have to spawn refiller asap when storage is built.
- * 3 - Fall-back behaviour for roles that are too dependent on developed bases or areas
- * 4 - Basic Defense of main room
- * 5 - Automatic handling of raiders in remote rooms and prioritizing spawning of attacker to deal with it first
- * 6 - Don't call variables in memory directly from roles etc. but rather implement statemachine that can ensure they're initialized and valid before being accessed.
- * 7 - assuming some values e.g. carry capacity for calculations updated already but should use constants not hard values to make code reusable for different worlds
- * 8 - Need to calculate how much decay happens in a room so i can calculate how much repairer work I can do
- *  */ 
+/** LIMITATIONS **/
+= High Priority =
+1 - Change tracking of Object Of Omportance
+	1.1 - intelDB {
+			survey[roomName]: {
+				resourceNode: [{type:string, //energy, powerbank, commodity, mineral - i.e. resource type
+							id:string,
+							x:number,
+							y:number}],
+				exitDirections:[up,down,left,right]
+			},
+			activity[roomName]: {
+				timestamp:number,
+				owner:string,
+				hostileStructures:[Structure],
+				hostileCreeps:[Creep],
+				scavengeTargets[]: {
+					type:string, //tombstone,dropped resource,ruin, etc
+					id:string,
+					x:number,
+					y:number
+				}
+			}
+		}
+
+1 - Spawnqueue tiered arrays to make sorting and prioritization easier
+	1 - Preservation
+		1.1 - Base Function (e.g. Refillers, Cooker, Repairer)
+		1.2 - Military (e.g. Active Defensive Mission Creep)
+	2 - Generation
+		2.1 - Farm Reservation (e.g. Claimers)
+		2.2 - 
+2 - Sorting of spawn queue with new additions e.g. When harvesters die, i must prioritize the one with the closest to base to be respawned next, not just any one.
+
+- Change Harvester source attribute to target to make task state machine generic
+
+- Event , broadcast, subscribe to reduce find, decision checks, etc. e.g. let remote harvest transports finish dropped energy pile from harvester, or
+register invader tomb for scavenge, or call for help or some goal to initiate, or some creep to do something when another braodcasts the right thing. e.g. process newly
+discovered remote source, check if should harvest, and kick off goal/task.
+
+5 - Automatic handling of raiders in remote rooms and prioritizing spawning of attacker to deal with it first
+6 - Don't call variables in memory directly from roles etc. but rather implement statemachine that can ensure they're initialized and valid before being accessed.
+7 - assuming some values e.g. carry capacity for calculations updated already but should use constants not hard values to make code reusable for different worlds
+
+= Tactical Priority =
+- Basic Defense of main room
+	. No prioritized tower filler code, can easily empty
+	. Rampart Defense Code
+	. No sensitivity to real base siege or remote harvest harass, creep just all respawn - can dry myself
+	. No Signals to avoid invader npcs in remotes or kill with defender creep that can measure and handle them while civilians wait
+- Keeper Room Farming
+	. Spawn Combat Creep to kill Source Keepers effectively
+	. Calculate Keeper respawns and evade them while having combat creep present effectively
+	. Mineral Mining
+
+= Low Priority =
+- baseLink automatic setting (near spawn) creep.room.memory.baseLink - currently is manual
+- baseCommon - preserver.decayAudit & sustainRepair mission Need to calculate how much decay happens in a room so i can calculate how much repairer work I can do
+- Tiered behaviour for roles / tasks depending on base development levels and/or creep size levels and/or target areas e.g. upgrader links
+
 
 // IDEAS
 // calculator util to optimize planning and decision-making of objects and actions in the game
 
-// warden system - each room has warden object that links like network to base through each other and keeps logic for handling threats and intel
-// - remembering hostile position when blinded
-// - scout logic to expand warden network
-// - reserve logic for remote rooms
-// - preserve logic for creep flight and renewal
-// - maintenance logic for roads etc
-// - base defense logic for owned rooms eg rampart and wall maintenance, towers logic
+swarmlink system - swarmlink behaviours for different situations, starting with transporter linking
+- swarmlink uses game.creep[].pos knowledge to find linkable creeps then groups creeps with same goals to determine which links to make that tick and then e.g. bucket energy
+- different situations like remote harvesting, energy transmission swarm for upgrader or builder fueling or base filling
+- must implement room position reservation system e.g. spawn exit, static refiller station, container delivery station, restricted areas that swarms wont clog
+
+warden system - each room has warden object that links like network to base through each other and keeps logic for handling threats and intel
+- remembering hostile position when blinded
+- scout logic to expand warden network
+- reserve logic for remote rooms
+- preserve logic for creep flight and renewal
+- maintenance logic for roads etc
+- base defense logic for owned rooms eg rampart and wall maintenance, towers logic
+
+// base building logic
+// - must leave space around edges of base to move because things can get stuck if structures are adjacent to mountains
+// - 

@@ -16,6 +16,10 @@ module.exports.loop = function () {
   
     baseCommon.garbageCollection();
 
+    if(Game.cpu.bucket = 10000) {
+        Game.cpu.generatePixel();
+    }
+
     /** INITIALIZE STATE */
     if(!Memory.rooms) {
         Memory.rooms = {};
@@ -44,7 +48,7 @@ module.exports.loop = function () {
             startSpawn = s;
         }
         var closestSource = Game.spawns[startSpawn].pos.findClosestByPath(FIND_SOURCES);
-        
+        /*
         spawner.queueSpawn({memory:{role:'harvester',source:closestSource.id}});
         spawner.queueSpawn({memory:{role:'transport'}});
         spawner.queueSpawn({memory:{role:'harvester',source:sources[1].id}});
@@ -53,6 +57,7 @@ module.exports.loop = function () {
         spawner.queueSpawn({memory:{role:'harvester',source:sources[0].id}});                                                                                                                     
         spawner.queueSpawn({memory:{role:'harvester',source:sources[1].id}});
         spawner.queueSpawn({memory:{role:'upgrader'}});
+        */
     }
 
     try {
@@ -163,12 +168,14 @@ module.exports.loop = function () {
 }
 
 // commands examples
-// Memory.rooms[baseCommon.getOwnedRooms()[0]].remoteSources.push({id:'5bbcab769099fc012e6338fb',room:'W27N56',x:'',y:''})
-// Memory.rooms[baseCommon.getOwnedRooms()[0]].spawnQueue.push({memory: { role:'harvester',source:'5bbcab769099fc012e6338fb'} })
-// Memory.rooms[baseCommon.getOwnedRooms()[0]].spawnQueue.push({memory: { role:'transport',target:'5bbcab769099fc012e6338f6',targetRoom:'W26N58'} })
-// Memory.rooms[baseCommon.getOwnedRooms()[0]].spawnQueue.push({memory: { role:'attacker',targetRoom:'W27N56'} })
-// Memory.rooms[baseCommon.getOwnedRooms()[0]].spawnQueue.push({memory: { role:'transport'} })
-// Memory.rooms[baseCommon.getOwnedRooms()[0]].spawnQueue.push({memory: { role:'claimer',targetRoom:''} })
-// Game.spawns['Spawn1'].spawnCreep([WORK,WORK,WORK,WORK,WORK,MOVE],"mc1",{memory:{role:'harvester',source:'5bbcab769099fc012e6338fa'}})
+// Memory.rooms['E38N53'].remoteSources.push({id:'5bbcab769099fc012e6338fb',room:'W27N56',x:'',y:''})
+// Memory.rooms['E38N53'].spawnQueue.push({memory: { role:'harvester',source:'5bbcaf299099fc012e63a41f'} })
+// Memory.rooms['E38N53'].spawnQueue.push({memory: { role:'transport',target:'5bbcab769099fc012e6338f6'} })
+// Memory.rooms['E38N53'].spawnQueue.push({memory: { role:'builder',mode:'roadworker',targetRoom:'E38N53'} })
+// Memory.rooms['E38N53'].spawnQueue.push({memory: { role:'attacker',targetRoom:'W27N56'} })
+// Memory.rooms['E38N53'].spawnQueue.push({memory: { role:'transport'} })
+// Memory.rooms['E38N53'].spawnQueue.push({memory: { role:'claimer',targetRoom:''} })
+// Game.spawns['Spawn1'].spawnCreep([WORK,WORK,WORK,WORK,WORK,CARRY,MOVE],"harvester1",{memory:{role:'harvester',source:'5bbcaf299099fc012e63a41f',homeRoom:'E38N53'}})
+// Game.spawns['Spawn1'].spawnCreep([CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE],"transport1",{memory:{role:'transport',target:'5bbcaf299099fc012e63a41a',homeRoom:'E38N53'}})
 // Game.spawns['Spawn1'].spawnCreep([TOUGH,TOUGH,TOUGH,],"ac1",{memory:{role:'attacker',target:'606893f710cdfaf1e7eae488','targetRoom':'W25N57'}})
 // Game.spawns['Spawn1'].spawnCreep([CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,],"refiller1",{memory:{role:'refiller'}})

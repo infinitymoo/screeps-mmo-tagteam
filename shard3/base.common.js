@@ -37,6 +37,14 @@ var baseCommon = {
         return this.ownedRooms;
     },
 
+    addRoomCachedPickables:function(roomPos) {
+        
+    },
+
+    validateRoomCachedPickables:function() {
+
+    },
+
     /**
      * Remove old creep data and enact default behaviour when that happens which is spawning lost creep for now
      */
@@ -133,7 +141,7 @@ var spawner = {
         }
 
         var spawnQueue = Memory.rooms[spawnRoom].spawnQueue;
-        for(let i = (spawnQueue.length-1); i > 0; i-- ) {
+        for(let i = (spawnQueue.length-1); i >= 0; i-- ) {
             let queuedSpawnRequest = spawnQueue[i]; //queuedSpawnRequest is the whole parms json object
             if( this.getSpawnPriority(queuedSpawnRequest.memory.role) > this.getSpawnPriority(parms.memory.role) ) {
                 Memory.rooms[spawnRoom].spawnQueue.splice(i,0,parms);
@@ -371,14 +379,18 @@ var spawner = {
                     //default
                      body = [CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE];
                 }
-                if( spawnParms.memory.role == "upgrader" || spawnParms.memory.role == "builder" ){
+                if( spawnParms.memory.role == "builder" ){
                     //default
                     body = [WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
+                }
+                if( spawnParms.memory.role == "upgrader" ){
+                    //default
+                    body = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
                 }
                 if( spawnParms.memory.role == "attacker" ){
                     //default
                      body = [TOUGH,TOUGH,TOUGH,TOUGH,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,ATTACK,ATTACK,HEAL];
-                }                            
+                }
                 if( spawnParms.memory.role == 'claimer') {
                     //do nothing for now until i can debug why it keeps respawming claimers
                     body = [CLAIM,CLAIM,MOVE,MOVE];
@@ -418,9 +430,13 @@ var spawner = {
                     //default
                      body = [CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE,CARRY,CARRY,MOVE];
                 }
-                if( spawnParms.memory.role == "upgrader" || spawnParms.memory.role == "builder" ){
+                if( spawnParms.memory.role == "builder" ){
                     //default
                     body = [WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
+                }
+                if( spawnParms.memory.role == "upgrader" ){
+                    //default
+                    body = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE];
                 }
                 if( spawnParms.memory.role == "attacker" ){
                     //default

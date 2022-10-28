@@ -1,21 +1,3 @@
-/* Summarized Behaviour
-**
-** Refillers depend on a room Storage and Prioritization of refilling targets is Base Link and then filling things on the way, otherwise drop in Storage as fall-back
-**
-** 1 - If creep cargo is empty, switch to pickup mode through 'transport' state attribute = false
-** 2 - If creep cargo full, switch to dropoff mode through 'transport' = true
-
-** 3 - if in dropoff mode, check if have targetlock with a store attribute for pickup and if so, fill structures on our way moving there
-** 4 - if targetLock target has no free capacity, switch to fillable structures as target to go for as fallback
-** 5 - as discussed in #3, fill thigns on way to targetLocked target
-** 6 - if we didn't get an early function return because of #5 happening, it means we haven't transferred energy yet, so might be at target to do it now, and if successful, release targetLock
-
-** 7 - if we didn't have a targetLock for the above block of code to run with, check homeRoom attribute, find a link, and go fill it up
-** 8 - if no targets to go fill up that has space (see #4), then lets go fill up from room's Storage, which is same as pickup behaviour
-
-** 9 - Pickup mode, get from room Storage As #1 shows, pickup mode is on when no energy to transfer or #8 happens
-*/
-
 /** Limitations to address asap
  * 1 homeRoom attribute management
  * 2 Dependence on Storage structure - why not behave like transport if no Storage?
@@ -27,21 +9,12 @@
     /** @param {Creep} creep **/
     run: function(creep) {
 
-        // 1
-        if(creep.memory.transport && creep.store[RESOURCE_ENERGY] == 0) {
-            creep.memory.transport = false;
-            creep.say('🔄 pickup');
-        }
-        // 2
-        else if(!creep.memory.transport && creep.store[RESOURCE_ENERGY] != 0 ) {
-            creep.memory.transport = true;
-            creep.say('dropoff');
-        }
+        this.checkTransition(creep);
         
         //optimization for if i'm close to it, even while running drop-off
         var source = creep.room.storage;
         if( source ) {
-            var result = creep.withdraw(source,RESOURCE_ENERGY);
+            let result = creep.withdraw(source,RESOURCE_ENERGY);
         }
 
         if(creep.memory.mode && creep.memory.mode == "static") {
@@ -88,6 +61,7 @@
             // 3
             if(creep.memory.transport) {
                 var target = false;
+                var result;
                 
                 if(creep.memory.targetLock) {
                     var targetLock = Game.getObjectById(creep.memory.targetLock);
@@ -100,6 +74,7 @@
                 }
                 
                 //we want a list of things to refill on our way to our targetlock for efficiency purposes
+                //TODO read from cache not refind everything
                 var targets = creep.room.find(FIND_STRUCTURES, {
                     filter: (structure) => {
                         return (structure.structureType == STRUCTURE_EXTENSION ||
@@ -109,33 +84,33 @@
                             structure.store.getFreeCapacity(RESOURCE_ENERGY) > 5;//avoid link transfer cost leaving 1 energy gaps to call for refilling
                     }
                 });
+                
+                if(targets.length > 1) {
+                    for(var i=1;i<targets.length;i++) {
+                        if(creep.pos.isNearTo(targets[i])) {
+                            result = creep.transfer(targets[i], RESOURCE_ENERGY);
+                            break;
+                        }
+                    }
+                }
 
-                // 4
+                //above might empty it, so lets check and refuel if so.
+                this.checkTransition(creep);
+                if( !creep.memory.transport )
+                    this.getSource(creep);
+                
                 
                 //don't have targetLock with free capacity
                 if(!target) {
-                    if(targets[0]) {
-                        target = targets[0];
-                        creep.memory.targetLock = target.id;
-                    }
+                    this.getNewRefillTarget(creep,targets);
+                    target = Game.getObjectById(creep.memory.targetLock);
                 }
                 
-                // 5
                 //if we're passing something that can be filled on our way to our targetLock, fill it
                 if(target) {
-                    var result;
-                    if(targets.length > 1) {
-                        for(var i=1;i<targets.length;i++) {
-                            if(creep.pos.isNearTo(targets[i])) {
-                                result = creep.transfer(targets[i], RESOURCE_ENERGY);
-                            }
-                        }
-                    }
                     
-                    //transferred some energy but still not at target
                     if( creep.pos.isNearTo(target) && (creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) ) {      
                         result = creep.transfer(target, RESOURCE_ENERGY);
-                        return;
                     }
                     
                     //transferred some energy but still not at target
@@ -147,12 +122,17 @@
                     //if we reached our target and transferred successfully, release targetLock
                     if(result == OK && creep.pos.isNearTo(target)) {
                         delete creep.memory.targetLock;
+                        this.getNewRefillTarget(creep,targets);
+                        target = Game.getObjectById(creep.memory.targetLock);
+                        if( !creep.pos.isNearTo(target) && (creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) ) {                            
+                            creep.travelTo(target, {ignoreCreeps: false,range:1,reusePath:10});
+                            return;
+                        }
+                        return;
                     }                    
                 }
 
-                // 7
-                //TODO handle homeroom logic automatically, doesnt' seem any code for it
-                //if we didn't have a targetLock for the above block of code to run with, find Base Link to fill
+                //if reached original target and transferred, baseLink is next target for now
                 if(creep.memory.homeRoom && 
                     Memory.rooms[creep.memory.homeRoom].baseLink && 
                     Game.getObjectById(Memory.rooms[creep.room.name].baseLink).store.getFreeCapacity(RESOURCE_ENERGY) > 5) {//avoid link transfer cost leaving 1 energy gaps to call for refilling
@@ -161,32 +141,72 @@
                     target = baseLink;
                     creep.memory.targetLock = baseLink.id;
                 }
-                
-                //console.log("refiller end of 7");
 
-                // 8
                 
-                //no targets, so lets go refill from storage.
-                let source = creep.room.storage;
-                if( source )
-                    if( creep.withdraw(source,RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                        creep.travelTo(source, {ignoreCreeps: false,range:1,reusePath:10});
-                    }
             }
-
-            // 9
             //TODO what if there's no storage? need to have fallback behaviour.
             //pickup mode
             else {
-                var source = creep.room.storage;
-                if( source ) {
-                    var result = creep.withdraw(source,RESOURCE_ENERGY);
-                    if( result == ERR_NOT_IN_RANGE) {
-                        creep.travelTo(source, {ignoreCreeps: false,range:1,reusePath:10});
-                    }
-                }
+                this.getSource(creep);
             }
         }
+    },
+
+    /**
+     * Evaluates state of creep and determines if it should switch modes
+     * @param {Creep} creep 
+     */
+    checkTransition: function(creep) {        
+        // if empty, switch to sourcing mode
+        if(creep.memory.transport && creep.store[RESOURCE_ENERGY] == 0) {
+            creep.memory.transport = false;
+            creep.say('🧊');
+        }
+        // if has energy and was in sourcing mode, go refill
+        else if(!creep.memory.transport && creep.store[RESOURCE_ENERGY] != 0 ) {
+            creep.memory.transport = true;
+            creep.say('🍺'); 
+        }
+    },
+
+    /**
+     * Takes from a source or travels to it
+     * @param {Creep} creep 
+     */
+    getSource: function(creep) {
+        var source = creep.room.storage;
+        if( source ) {
+            var result = creep.withdraw(source,RESOURCE_ENERGY);
+            if( result == ERR_NOT_IN_RANGE) {
+                creep.travelTo(source, {ignoreCreeps: false,range:1,reusePath:10});
+            }
+        }
+    },
+
+    /** Sets new creep memory targetLock */
+    getNewRefillTarget: function(creep,cachedTargets) {
+            
+        var targets;
+        if(cachedTargets) {
+            targets = cachedTargets;
+        }
+        else {
+            //we want a list of things to refill on our way to our targetlock for efficiency purposes
+            targets = creep.room.find(FIND_STRUCTURES, {
+                filter: (structure) => {
+                    return (structure.structureType == STRUCTURE_EXTENSION ||
+                        structure.structureType == STRUCTURE_SPAWN ||
+                        (structure.structureType == STRUCTURE_LINK && Game.rooms[creep.room.name].memory.baseLink == structure.id) || // only target link if its baselink
+                        structure.structureType == STRUCTURE_TOWER) &&
+                        structure.store.getFreeCapacity(RESOURCE_ENERGY) > 5;//avoid link transfer cost leaving 1 energy gaps to call for refilling
+                }
+            });
+        }
+
+        if(targets[0]) {
+            var target = targets[0];
+            creep.memory.targetLock = target.id;
+        }        
     }
 };
 

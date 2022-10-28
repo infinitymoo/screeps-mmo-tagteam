@@ -1,4 +1,5 @@
 var roleHarvester = require('role.harvester');
+var baseCommon = require('base.common');
 
 /** Limitations
  * 1 - creep.memory.target isn't automatically set
@@ -15,107 +16,61 @@ var roleTransport = {
     /** @param {Creep} creep **/
     run: function(creep) {
 
-        if(creep.memory.transport &&
-            creep.store[RESOURCE_ENERGY] == 0) {
-                
-            creep.memory.transport = false;
-            creep.say('🔄 pickup');
-        }
-        else if(
-            !creep.memory.transport &&
-            //TODO check if target alive and if so wait to fill up before going back to give chance to share nearby pickup workload with other harvesters
-            ((creep.store[RESOURCE_ENERGY] != 0 && //was 
-            (creep.room.name == creep.memory.homeRoom) ) ||
-            
-            (creep.store.getFreeCapacity() == 0 &&
-            (creep.room.name != creep.memory.homeRoom)) )
-            ) {
-                    
-            creep.memory.transport = true;
-            creep.say('dropoff');
-        }
+        this.checkTransition(creep);
 
         //drop off
         if(creep.memory.transport) {
-            /*
-            var targetRoom = creep.memory.targetRoom;
-            if(targetRoom && (creep.room.name != creep.memory.homeRoom)) {
-                creep.travelTo(new RoomPosition(25,25,creep.memory.homeRoom), {ignoreCreeps:true,range:20}); //check if this is main cuase of heavy cpu use
-                return;
+            let result = -1000;
+            let target = false;
+
+            //for now set storage as dropoff var target (not memory target)
+            if( Game.rooms[creep.memory.homeRoom].storage ) {
+                target = Game.rooms[creep.memory.homeRoom].storage;
             }
-            */
+            
+            if(target && target.store.getFreeCapacity() > 0) {
+                if(!creep.pos.isNearTo(target) ) {
+                    creep.travelTo(target, {ignoreCreeps: false,range:1,maxRooms:3});
+                }
+                else {
+                    result = creep.transfer(target, RESOURCE_ENERGY); //TODO have to transfer all things not just energy
+                    if( result != OK ) {
+                        console.log(`WARNING: transport creep ${creep.name} couldn't transfer to target while next to it`);
+                    }
+                    else {
+                        creep.memory.transport = false;
+                        creep.travelTo(Game.getObjectById(creep.memory.target), {ignoreCreeps: false,range:1,maxRooms:3});// not same as target around here, but is actual pickup target
+                        return;
+                    }
+                }
                 
+            };            
+
+            //TODO - must read this off cache instead of keeping to refresh it for every transport.
             var targets = Game.rooms[creep.memory.homeRoom].find(FIND_STRUCTURES, {
                 filter: (structure) => {
                     return (structure.structureType == STRUCTURE_EXTENSION ||
                         structure.structureType == STRUCTURE_SPAWN ||
                         structure.structureType == STRUCTURE_TOWER ||
-                       // structure.structureType == STRUCTURE_CONTAINER ||
+                        structure.structureType == STRUCTURE_CONTAINER ||
                         structure.structureType == STRUCTURE_LINK) &&
                         structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
                 }
             });
-            
-            //prioritize storage as destination
-            if(creep.room.storage && creep.room.storage.store.getFreeCapacity() > 0) {
-                let result = -1000;
-                if(!creep.pos.isNearTo(creep.room.storage) ) {
-                    creep.travelTo(creep.room.storage, {ignoreCreeps: false,range:1,maxRooms:3});
-                }
-                else {                            
-                    result = creep.transfer(creep.room.storage, RESOURCE_ENERGY);
-                    return;
-                }
                 
-                if(targets.length > 1) {
-                    for(var i=1;i<targets.length;i++) {
-                        if(creep.pos.isNearTo(targets[i])) {
-                            result = creep.transfer(targets[i], RESOURCE_ENERGY);
-                            if(result == OK)
-                                break;
-                        }
+            if(targets.length > 1) {
+                for(var i=1;i<targets.length;i++) {
+                    if(creep.pos.isNearTo(targets[i])) {
+                        result = creep.transfer(targets[i], RESOURCE_ENERGY);
+                        if(result == OK)
+                            return;
                     }
                 }
-                return;
             }
+
+            //if we get here, it means none of the early returns happened and we can't drop off energy in structures, so go to controller to feed upgraders.
             
-            //console.log(JSON.stringify(targets));
-                
-            var targets = Game.rooms[creep.memory.homeRoom].find(FIND_STRUCTURES, {
-                filter: (structure) => {
-                    return (structure.structureType == STRUCTURE_EXTENSION ||
-                        structure.structureType == STRUCTURE_SPAWN ||
-                        structure.structureType == STRUCTURE_TOWER ||
-                       // structure.structureType == STRUCTURE_CONTAINER ||
-                        structure.structureType == STRUCTURE_LINK) &&
-                        structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
-                }
-            });
-            
-            if(targets[0]) {
-                var result;
-                if(targets.length > 1) {
-                    for(var i=1;i<targets.length;i++) {
-                        if(creep.pos.isNearTo(targets[i])) {
-                            result = creep.transfer(targets[i], RESOURCE_ENERGY);
-                            if(result == OK)
-                                break;
-                        }
-                    }
-                }
-                
-                if( result == OK && !creep.pos.isNearTo(targets[0]) ) {
-                    creep.travelTo(targets[0], {ignoreCreeps: false,range:1,maxRooms:3});
-                    return;
-                }
-                
-                result = creep.transfer(targets[0], RESOURCE_ENERGY);
-                //console.log(result);
-                if(result == ERR_NOT_IN_RANGE) {
-                    creep.travelTo(targets[0], {ignoreCreeps: false,range:1,maxRooms:3});
-                }
-            }
-            else {
+            if( !Game.rooms[creep.memory.homeRoom].storage ) {
                 creep.travelTo(Game.rooms[creep.memory.homeRoom].controller,{range:4}); // this bugs out to other rooms for some reason if i check its own room. why though?
                 if(creep.room.name == creep.memory.homeRoom) {
                     var range = creep.pos.getRangeTo(creep.room.controller.pos);
@@ -123,6 +78,7 @@ var roleTransport = {
                         creep.drop(RESOURCE_ENERGY);
                 }
             }
+            
         }
         //pickup
         else {
@@ -184,11 +140,14 @@ var roleTransport = {
                             return;
                         }
                     }
-                    //if nothing on ground near target, withdraw from creep directly 
-                    else if( Game.getObjectById(creep.memory.target) instanceof Creep || Game.getObjectById(creep.memory.target) instanceof Tombstone) {
+                    //if nothing on ground near target, withdraw from creep or tombstone (or ruin?) directly 
+                    //TODO withdraw any resource not just energy
+                    else if( !source && target ) {
                         result = creep.withdraw(Game.getObjectById(creep.memory.target),RESOURCE_ENERGY);
+                        if( result == ERR_INVALID_TARGET)
+                            result = target.transfer(creep,RESOURCE_ENERGY);
                         if( result == ERR_NOT_IN_RANGE) {
-                            creep.travelTo(Game.getObjectById(creep.memory.target), {ignoreCreeps: false,range:1,maxRooms:3});
+                            creep.travelTo(target, {ignoreCreeps: false,range:1,maxRooms:3});
                             return;
                         }
                         if( result == OK ) {
@@ -239,6 +198,34 @@ var roleTransport = {
                     //we're in 
                 }
             }
+
+            if(!target) {
+                creep.travelTo(Game.rooms[creep.memory.homeRoom].controller);
+            }
+        }
+    },
+
+    /**
+     * Evaluates state of creep and determines if it should switch modes
+     * @param {Creep} creep 
+     */
+    checkTransition: function(creep) {        
+        // if empty, switch to sourcing mode
+        if(creep.memory.transport && creep.store[RESOURCE_ENERGY] == 0) {
+            creep.memory.transport = false;
+            creep.say('🧊');
+        }
+        // if has energy and was in sourcing mode, go refill
+        else if(!creep.memory.transport &&
+                ((creep.store[RESOURCE_ENERGY] != 0 && //was 
+                (creep.room.name == creep.memory.homeRoom) ) ||    
+
+            (creep.store.getFreeCapacity() == 0 &&
+            (creep.room.name != creep.memory.homeRoom)) )
+            ) {
+            //TODO check if target alive and if so wait to fill up before going back to give chance to share nearby pickup workload with other harvesters
+            creep.memory.transport = true;
+            creep.say('🍺'); 
         }
     },
 
@@ -254,6 +241,14 @@ var roleTransport = {
 
     },
 
+    /**
+     * Uses baseCommon room caches to pickup nearby stuff
+     * TODO other stuff than energy
+     * @param {Creep} transportCreep 
+     */
+    smartPickup: function(transportCreep) {
+        
+    },
 
     // This calculates coverage as a percentile (e.g. return value of 1 = 100%, 0.5 = 50%) based on work parts, range from base and transport capacity
     //TODO need to be cognisant of road-coverage and transport type (plain vs roadster) to calculate this properly
