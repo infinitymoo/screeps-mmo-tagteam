@@ -18,6 +18,7 @@ var baseCommon = {
         spawnCommon.run();
         linkCommon.run();
         this.towerControl();
+        this.defenseControl();
     },
 
     /**
@@ -115,7 +116,6 @@ var baseCommon = {
         }
         else {
             let priority = this.prioritizeSpawn(spawnParms);
-            u.debug(priority,`pushToSpawnQueue normal priority`);
             queue[Object.keys(priority)[0]][priority[Object.keys(priority)[0]]].splice(0,0,spawnParms);
         }
         this.spawnQueues[roomName] = queue;
@@ -186,6 +186,7 @@ var baseCommon = {
         switch(spawnParms.memory.role) {
             case "refiller" : return {p:"baseFunction"};
             case "defender" : return {p:"defense"};
+            case "attacker" : return {p:"defense"};
             case "repairer" : return {p:"maintenance"};
             case "harvester" : return {g:"acquisition"};
             case "reserver" : return {g:"reserve"};
@@ -193,6 +194,7 @@ var baseCommon = {
             case "refiner" : return {g:"refine"};
             case "surveyer" : return {g:"survey"};
             case "builder" : return {e:"baseExpansion"};
+            case "claimer" : return {e:"baseExpansion"};
             case "upgrader" : return {e:"baseUpgrader"};
             case "" : return {e:"offense"};
             default: throw new Error(`E baseCommon.prioritizeSpawn() couldn't determine priority for spawn with role ${spawnParms.role}`);
@@ -223,7 +225,7 @@ var baseCommon = {
                     
                     baseCommon.pushToSpawnQueue(roomName,{memory:{class:'courier',role:'transport'},sizingParms:{policy:"urgent"}},1);
                     baseCommon.pushToSpawnQueue(roomName,{memory:{class:'miner',role:'harvester',source:closestSource.id},sizingParms:{policy:"urgent"}},1);
-                    if(Game.rooms[roomName].store) {
+                    if(Game.rooms[roomName].storage) {
                         baseCommon.pushToSpawnQueue(roomName,{memory:{class:'courier',role:'refiller'},sizingParms:{policy:"urgent"}},1);
                     }
 
@@ -271,62 +273,162 @@ var baseCommon = {
     },
 
     towerControl() {
-        var homeRoom = Memory.homeRoom;
-        if(!homeRoom) {
-            homeRoom = 'E38N53';
-        }
-        try {
-            /** TOWER CONTROL */
-            var towers = Game.rooms[homeRoom].find(FIND_STRUCTURES, {
-                            filter: (structure) => {
-                                return (structure.structureType == STRUCTURE_TOWER);
-                            }
-                        });
-                        
-            if(towers.length > 0) {
-        
-                var closestHostile = towers[0].pos.findClosestByRange(FIND_HOSTILE_CREEPS);
-                if(closestHostile) {
-                    _.forEach(towers, (tower) => {
-                        tower.attack(closestHostile)
-                    })
-                }
-                /*
-                else {
-                    var closestDamagedStructure = towers[0].pos.findClosestByRange(FIND_STRUCTURES, {
-                        filter: (structure) =>
-                            (structure.hits < structure.hitsMax) && 
-                            (structure.structureType != STRUCTURE_WALL) &&
-                            structure.hits < 1000000
-                        });
-                    if(closestDamagedStructure) {
+        let rooms = this.ownedRooms;
+        for(let r in rooms ) {
+            let currentRoom = rooms[r];
+
+            try {
+                /** TOWER CONTROL */
+                var towers = Game.rooms[currentRoom].find(FIND_STRUCTURES, {
+                                filter: (structure) => {
+                                    return (structure.structureType == STRUCTURE_TOWER);
+                                }
+                            });
+                            
+                if(towers.length > 0) {
+            
+                    var closestHostile = towers[0].pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+                    if(closestHostile) {
                         _.forEach(towers, (tower) => {
-                            tower.repair(closestDamagedStructure);
+                            tower.attack(closestHostile)
                         })
                     }
+                    /*
                     else {
-                        closestDamagedStructure = towers[0].pos.findClosestByRange(FIND_STRUCTURES, {
+                        var closestDamagedStructure = towers[0].pos.findClosestByRange(FIND_STRUCTURES, {
                             filter: (structure) =>
                                 (structure.hits < structure.hitsMax) && 
                                 (structure.structureType != STRUCTURE_WALL) &&
-                                structure.hits < 2000000
+                                structure.hits < 1000000
                             });
                         if(closestDamagedStructure) {
                             _.forEach(towers, (tower) => {
                                 tower.repair(closestDamagedStructure);
                             })
+                        }
+                        else {
+                            closestDamagedStructure = towers[0].pos.findClosestByRange(FIND_STRUCTURES, {
+                                filter: (structure) =>
+                                    (structure.hits < structure.hitsMax) && 
+                                    (structure.structureType != STRUCTURE_WALL) &&
+                                    structure.hits < 2000000
+                                });
+                            if(closestDamagedStructure) {
+                                _.forEach(towers, (tower) => {
+                                    tower.repair(closestDamagedStructure);
+                                })
+                        }
+                        }
                     }
-                    }
+                    */
                 }
-                */
             }
-        }
-        catch( problem ) {
-            console.log(`E baseCommon.run(towerControl()): ${problem.name}:${problem.message} ${problem.stack}`);
+            catch( problem ) {
+                console.log(`E baseCommon.run(towerControl()): ${problem.name}:${problem.message} ${problem.stack}`);
+            }
         }
     },
 
-    addRoomCachedPickables:function(roomPos) {
+    defenseControl:function() {
+
+        if (Game.time % 5 === 0 ) {
+
+            let rooms = [];
+            _.forEach(Game.creeps,(c) => {
+                if( !_.includes(rooms,c.room.name ) && this.getRoomThreatStatus(c.room.name) < 1) {
+                    rooms.push(c.room.name); //only run this check once per room I have a creep in
+                
+                    let hostileCreeps = c.room.find(FIND_HOSTILE_CREEPS, {
+                        filter: (hostileCreep) => {
+                            return hostileCreep.hits !== 0;
+                        }
+                    });
+
+                    if( hostileCreeps.length > 0 ) {
+                        this.setRoomThreatStatus( c.room.name, hostileCreeps.length );
+                    }
+
+                    if( hostileCreeps.length == 1 ) {
+                        this.spawnDefenders( c.room.name, hostileCreeps );
+                        Memory.rooms[roomName].defending = Game.time + 1500;
+                    }
+                }
+
+                if( this.getRoomThreatStatus(c.room.name) > 0 ) {
+                    if( Memory.rooms[c.room.name].defending && Memory.rooms[c.room.name].defending >= Game.time )
+                        delete Memory.rooms[c.room.name].defending;
+                    if( !Memory.rooms[c.room.name].defending )
+                        this.setRoomThreatStatus( c.room.name, 0 );
+                }
+            });
+
+        }
+    },
+
+    getRoomThreatStatus:function( roomName ) {
+        this.initializeIntelDB( roomName );
+        
+        if( Memory.intelDB[roomName] ) {
+            return Memory.intelDB[roomName].activity.threatLevel;
+        }
+    },
+
+    setRoomThreatStatus:function( roomName, threatLevel ) {
+        this.initializeIntelDB( roomName );
+        Memory.intelDB[roomName].activity.threatLevel = threatLevel;
+        
+        if( threatLevel > 0 ) {
+            let threatenedCreeps = _.filter(Game.creeps,(creep) => {
+                return creep.room.name = roomName &&
+                creep.memory.class != "defense" &&
+                creep.memory.class != "offense";
+            });
+
+            _.forEach( threatenedCreeps, (creep) => {
+                creep.memory.fleeing = roomName;
+            });
+        }
+    },
+
+    spawnDefenders: function( roomName, hostileCreeps ) {
+        if (!Memory.rooms[roomName].defending) {
+            this.pushToSpawnQueue(roomName,{memory:{class:'defense',role:'attacker',targetRoom:roomName}});    
+        }        
+    },
+
+    initializeIntelDB: function( roomName ) {
+        let rooms = [];
+        if( !Memory.intelDB ) {
+            Memory.intelDB = {};
+        }
+
+        if( !roomName ) {
+            rooms = this.getOwnedRooms;
+        }
+        else {
+            rooms.push(roomName);
+        }
+            
+        _.forEach( rooms, (r) => {
+            if( !Memory.intelDB[r] )
+                Memory.intelDB[r] = {};
+
+            Memory.intelDB[r].survey = {};
+            Memory.intelDB[r].survey.poi = [];
+            Memory.intelDB[r].survey.linkedRooms = [];
+
+            Memory.intelDB[r].activity = {};
+            Memory.intelDB[r].activity.timestamp = 0;
+            Memory.intelDB[r].activity.threatLevel = 0;
+            Memory.intelDB[r].activity.owner = false;
+            Memory.intelDB[r].activity.hostileStructures = [];
+            Memory.intelDB[r].activity.hostileCreeps = [];
+            Memory.intelDB[r].activity.scavengeTargets = [];            
+        });            
+        
+    },
+
+    addRoomCachedPickables:function() {
         
     },
 
@@ -342,7 +444,7 @@ var baseCommon = {
             for(var creepName in Memory.creeps) {
                 if(!Game.creeps[creepName]) {
                     if(!Memory.creeps[creepName].norespawn && !(Memory.creeps[creepName].role == "breaker" || Memory.creeps[creepName].role == "attacker") )
-                        spawner.queueSpawn({memory:Memory.creeps[creepName]})
+                        this.pushToSpawnQueue(Memory.creeps[creepName].homeRoom,{memory:Memory.creeps[creepName]});
                     delete Memory.creeps[creepName];
                 }
             }
@@ -403,8 +505,9 @@ var spawnCommon = {
                 delete spawnParms.memory.transportCoverage
                 delete spawnParms.memory.transportList;
             }
-            if(spawnParms.memory.role == "transport") { 
+            if(spawnParms.memory.role == "transport" || spawnParms.memory.role == "refiller") {
                 delete spawnParms.memory.target;
+                delete spawnParms.memory.targetLock;
             }
 
             //initialize basic parms if none specified                        
@@ -433,17 +536,22 @@ var spawnCommon = {
                     
                     result = spawn.spawnCreep(body,name,spawnParms);
 
+                    // u.debug(body,`debug spawn`);
+                    // u.debug(name,`debug spawn`);
+                    // u.debug(spawnParms,`debug spawn`);
+                    // u.debug(result,`debug spawn`);
+
                     if( result == ERR_NOT_ENOUGH_ENERGY && spawnParms.memory.role == "refiller") {
                         body = this.designBody(thisRoom,spawnParms.memory.class,spawnParms.memory.role,{policy:"urgent"});
                         result = spawn.spawnCreep(body,name,{memory:spawnParms.memory});
                     }
-                    
+
                     if( result < 0 ) {
                         baseCommon.pushToSpawnQueue(thisRoom,spawnParms); //not sure if this patch is needed, thought i had another bug
                     }
                 }
-                else
-                    throw new Error(`E baseCommon->spawnCommon.runSpawn didn't have spawnParms: ${JSON.stringify(spawnParms)}`);
+                // else
+                //     throw new Error(`E baseCommon->spawnCommon.runSpawn didn't have spawnParms: ${JSON.stringify(spawnParms)}`);
                 
                 // if(result < 0)
                 //     console.log("spawner error: "+result);
@@ -472,10 +580,11 @@ var spawnCommon = {
         if(!roleName) throw new Error(`E baseCommon.designBody() called without roleName`);
 
         let body = [];
+        let partCount = 1;
         try{
             //initialization
             let sizingPolicy = sizingParms.policy;
-            if(!sizingPolicy) sizingPolicy = `max`;
+            if(!sizingPolicy) sizingPolicy = `conserve`;
             let sCapacity = Game.rooms[roomName].energyCapacityAvailable;
             let sAvailable = Game.rooms[roomName].energyAvailable;
 
@@ -492,59 +601,99 @@ var spawnCommon = {
                 case "distributor": 
                     body.push(MOVE);
                     if( sizingPolicy == "max")
-                        carryCount = Math.floor( (sCapacity - BODYPART_COST[MOVE]) / BODYPART_COST[CARRY] );
+                        partCount = Math.floor( (sCapacity - BODYPART_COST[MOVE]) / BODYPART_COST[CARRY] );
+                    else if( sizingPolicy == "conserve")
+                        partCount = 8;
                     else //sizingPolicy == "urgent" || urgentPolicy == "optimise"
-                        carryCount = Math.floor( (sAvailable - BODYPART_COST[MOVE]) / BODYPART_COST[CARRY] );
-                    if( carryCount < 1 ) carryCount = 1;
-                    while (carryCount >= 1) { carryCount--; body.push(CARRY) };
+                        partCount = Math.floor( (sAvailable - BODYPART_COST[MOVE]) / BODYPART_COST[CARRY] );
+                    if( partCount < 1 ) partCount = 1;
+                    if( partCount > 49 ) partCount = 49;
+                    while (partCount >= 1) { partCount--; body.push(CARRY) };
                     break;
 
                 //refiller,transport,refiner
                 case "courier":
-                    let carryCount = 1; 
                     switch(roleName) {
                         case "refiller":
                         case "refiner":
-                            if( sizingPolicy == "max" )
-                                carryCount = Math.floor( sCapacity / (BODYPART_COST[MOVE] + BODYPART_COST[CARRY]*2) )
-                            else if ( sizingPolicy == "urgent" )
-                                carryCount = Math.floor( sAvailable / (BODYPART_COST[MOVE] + BODYPART_COST[CARRY]*2) );
-                            while (carryCount >= 1) { carryCount--; body.push(CARRY,CARRY,MOVE); };
+                            partCount = 4;
+                            // if( sizingPolicy == "conserve" )
+                            //     partCount = 4;
+                            // else if( sizingPolicy == "max" )
+                            //     partCount = Math.floor( sCapacity / (BODYPART_COST[MOVE] + BODYPART_COST[CARRY]*2) )
+                            // else
+                            if ( sizingPolicy == "urgent" )
+                                partCount = Math.floor( sAvailable / (BODYPART_COST[MOVE] + BODYPART_COST[CARRY]*2) );
+                            else if( sizingPolicy == "conserve")
+                                partCount = 8;
+                            if( partCount > 16 ) partCount = 16;
+                            while (partCount >= 1) { partCount--; body.push(CARRY,CARRY,MOVE); };
                             break;
                         //transport
-                        default:                            
+                        default:
                             if( sizingPolicy == "max" )
-                                carryCount = Math.floor( sCapacity / (BODYPART_COST[MOVE] + BODYPART_COST[CARRY]) );                            
+                                partCount = Math.floor( sCapacity / (BODYPART_COST[MOVE] + BODYPART_COST[CARRY]) );
+                            // else if( sizingPolicy == "conserve")
+                            //     partCount = 8;
                             else if ( sizingPolicy == "urgent" )
-                                carryCount = Math.floor( sAvailable / (BODYPART_COST[MOVE] + BODYPART_COST[CARRY]) );
-                            
-                                while (carryCount >= 1) { carryCount--; body.push(CARRY,MOVE); };
+                                partCount = Math.floor( sAvailable / (BODYPART_COST[MOVE] + BODYPART_COST[CARRY]) );
+                            else
+                                partCount = 20;
                     }
+                    if( partCount > 25 ) partCount = 25;
+                    while (partCount >= 1 ) { partCount--; body.push(CARRY,MOVE); };
                     break;
 
                 //builder,upgrader,repairer
                 case "worker":
                     switch(roleName) {
+                        case "repairer": partCount = 1; break;
                         case "builder":
                         case "upgrader":
-                        case "repairer":
                         default:
-                            let partCount = 1;
-                            if( sizingPolicy == "max")
+                            if( sizingPolicy == "min")
+                                partCount = 1;
+                            if( sizingPolicy == "conserve")
+                                partCount = 4;
+                            else if( sizingPolicy == "max")
                                 partCount = Math.floor( sCapacity / (BODYPART_COST[MOVE] + BODYPART_COST[CARRY] + BODYPART_COST[WORK]) );
                             else
                                 partCount = Math.floor( sAvailable / (BODYPART_COST[MOVE] + BODYPART_COST[CARRY] + BODYPART_COST[WORK]) );
-                            while (partCount >= 1) { partCount--; body.push(CARRY,WORK,MOVE); };
                     }
+                    if( partCount > 16 ) partCount = 16;
+                    while (partCount >= 1) { partCount--; body.push(CARRY,WORK,MOVE); };
                     break;
 
-                case "reserver":
-                    body.push[MOVE,MOVE,CLAIM,CLAIM];
+                case "specialist":
+                    switch(roleName) {
+                        case "upgrader":
+                        default:
+                            if( sizingPolicy == "max" || sizingPolicy == "conserve")
+                                partCount = Math.floor( sCapacity / (BODYPART_COST[MOVE] + BODYPART_COST[CARRY] + BODYPART_COST[WORK]*4) );
+                            // else if( sizingPolicy == "conserve")
+                            //     partCount = 2;
+                            else
+                                partCount = Math.floor( sAvailable / (BODYPART_COST[MOVE] + BODYPART_COST[CARRY] + BODYPART_COST[WORK]*4) );
+                    }                    
+                    if( partCount > 8 ) partCount = 8;
+                    while (partCount >= 1) { partCount--; body.push(CARRY,WORK,WORK,WORK,WORK,MOVE); };
                     break;
 
-                case "defender":
-                    let partCount = 1;
+                case "reserver":                    
+                    body.push(MOVE,MOVE,CLAIM,CLAIM);
+                    break;
+
+                case "defense":
                     partCount = Math.floor( sCapacity / (BODYPART_COST[TOUGH] + BODYPART_COST[MOVE]*2 + BODYPART_COST[ATTACK]) );
+                    if( partCount > 4 ) partCount = 4;
+                    for( let i = 0; i < partCount; i++) body.push(TOUGH);
+                    for( let i = 0; i < partCount; i++) body.push(MOVE,MOVE);
+                    for( let i = 0; i < partCount; i++) body.push(ATTACK);
+                    break;
+
+                case "offense":
+                    partCount = Math.floor( sCapacity / (BODYPART_COST[TOUGH] + BODYPART_COST[MOVE]*2 + BODYPART_COST[ATTACK]) );
+                    if( partCount > 12 ) partCount = 12;
                     for( let i = 0; i < partCount; i++) body.push(TOUGH);
                     for( let i = 0; i < partCount; i++) body.push(MOVE,MOVE);
                     for( let i = 0; i < partCount; i++) body.push(ATTACK);
@@ -555,27 +704,37 @@ var spawnCommon = {
                         case "harvester":
                         default:
                             body.push(CARRY);
-                            let partCount = 1;
-                            if( sizingPolicy == "max")
-                                partCount = Math.floor( sCapacity - BODYPART_COST[CARRY] ) / (BODYPART_COST[MOVE] + BODYPART_COST[WORK]*2);
-                            else if( sizingPolicy == "custom") {
-                                let designOpt = sizingParms.design;
-                                switch(designOpt) {
-                                    case "remote": body.push(WORK,WORK,WORK,MOVE,MOVE,MOVE); partCount = 0; break;
-                                    case "keeper": body.push(WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,MOVE,MOVE,MOVE,MOVE,MOVE); partCount = 0; break;
-                                    case "reserved":
-                                    default: body.push(WORK,WORK,WORK,WORK,WORK,MOVE,MOVE,MOVE); partCount = 0; break;
-                                }
-                            }
-                            else if( sizingPolicy != "urgent")
-                                partCount = Math.floor( sAvailable - BODYPART_COST[CARRY] ) / (BODYPART_COST[MOVE] + BODYPART_COST[WORK]*2);
-                            else {
+                            if( sizingPolicy == "urgent" ) {
                                 if( sAvailable < 200 ) sAvailable = 200; // minimum body size
                                 partCount = Math.floor( sAvailable - BODYPART_COST[CARRY] ) / (BODYPART_COST[MOVE] + BODYPART_COST[WORK]);
+                                if( partCount > 24 ) partCount = 24;
                                 while (partCount >= 1) { partCount--; body.push(WORK,MOVE); };
                             }
-                            //won't have partCount if already did urgent one just above.
-                            while (partCount >= 1) { partCount--; body.push(WORK,WORK,MOVE); };                            
+                            else {
+                                if(!sizingParms.design )
+                                    sizingParms.design = "reserved";
+                                if( sizingPolicy == "normal")
+                                {
+                                    let designOpt = sizingParms.design;
+                                    switch(designOpt) {
+                                        case "remote": // max 3 work 3 move
+                                            partCount = Math.floor( sCapacity - BODYPART_COST[CARRY] ) / (BODYPART_COST[MOVE] + BODYPART_COST[WORK]);
+                                            while (Math.min(partCount,3) >= 1) { partCount--; body.push(WORK,MOVE); };
+                                            break;
+                                        //case "keeper": body.push(WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,MOVE,MOVE,MOVE,MOVE,MOVE); partCount = 0; break;
+                                        case "reserved": // max 6 work 3 move
+                                            partCount = Math.floor( sCapacity - BODYPART_COST[CARRY] ) / (BODYPART_COST[MOVE] + BODYPART_COST[WORK]*2);
+                                            while (Math.min(partCount,3) >= 1) { partCount--; body.push(WORK,WORK,MOVE); };
+                                            break;
+                                        default:
+                                            break;
+                                    }
+                                }
+
+                                //won't have partCount if already did urgent one just above.
+                                if( partCount > 16 ) partCount = 16;
+                                while (partCount >= 1) { partCount--; body.push(WORK,WORK,MOVE); };
+                            }
                     }
                     break;
                 default: throw Error(`E baseCommon.designBody couldn't process class switch with ${className}`);
@@ -588,6 +747,10 @@ var spawnCommon = {
         //u.debug(body,"body design");
 
         return body;
+    },
+
+    buildBody: function() {
+        let body = [];
     }
 }
 
@@ -625,9 +788,10 @@ var linkCommon = {
     roomLinks: {},
 
     run() {
+        
         let rooms = baseCommon.getOwnedRooms();
-        for( r in rooms ) {
-            if(!this.validatateRoomLinks(rooms[r]) )
+        for( let r in rooms ) {
+            if(!this.validateRoomLinks(rooms[r]) )
                 this.setupRoomLinks(rooms[r]);
             this.runRoom(rooms[r]);
         }
@@ -638,7 +802,7 @@ var linkCommon = {
      * @param {string} roomName 
      * @returns {boolean}
      */
-    validatateRoomLinks(roomName) {
+     validateRoomLinks(roomName) {
         let links = Game.rooms[roomName].find(FIND_MY_STRUCTURES, {
             filter: (structure) => {
                 return (structure.structureType == STRUCTURE_LINK)
@@ -657,16 +821,29 @@ var linkCommon = {
             if( !Memory.rooms[roomName].links )
                 return false;
 
-            if( links.length >= 2)
+            if( links.length >= 2) {
                 if( !Memory.rooms[roomName].links.baseLink ||
                     !Memory.rooms[roomName].links.controllerLink )
                     return false;
-            if( links.length >= 3)
+
+                if( !Game.getObjectById(Memory.rooms[roomName].links.baseLink) ||
+                    !Game.getObjectById(Memory.rooms[roomName].links.controllerLink))
+                    return false;
+            }
+            if( links.length >= 3) {
                 if( !Memory.rooms[roomName].links.sourceLinkA )
+                    return false;                    
+
+                if( !Game.getObjectById(Memory.rooms[roomName].links.sourceLinkA))
                     return false;
-            if( links.length >= 4)
+            }
+            if( links.length >= 4) {
                 if( !Memory.rooms[roomName].links.sourceLinkB )
+
                     return false;
+                if( !Game.getObjectById(Memory.rooms[roomName].links.sourceLinkB))
+                    return false;
+            }
         }
         return true;
     },
@@ -696,16 +873,19 @@ var linkCommon = {
             }
 
             let sourceA = "";
-            if( links.length == 3 ) {
-                if( sources.length > 0 ) {
-                    for( s in sources ) {
-                        if( sources[s].pos.inRangeTo(link.pos,2) ) {
-                            Memory.rooms[roomName].links.sourceLinkA = link.id;
-                            sourceA = link.id;
-                            return;
+            if( links.length >= 3 ) {
+                let sourceALink = Game.getObjectById(Memory.rooms[roomName].links.sourceLinkA);
+                if(!sourceALink)
+                    if( sources.length > 0 ) {
+                        for( s in sources ) {
+                            if( sources[s].pos.inRangeTo(link.pos,2) ) {
+                                Memory.rooms[roomName].links.sourceLinkA = link.id;
+                                sourceA = link.id;
+                            }
                         }
                     }
-                }
+                else
+                    sourceA = Memory.rooms[roomName].links.sourceLinkA;
             }
 
             if( links.length == 4 ) {

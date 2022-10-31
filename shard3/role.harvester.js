@@ -100,13 +100,14 @@ var roleHarvester = {
             
             // 7
             
-            var targetRoom = Game.rooms[creep.memory.target];
+            var targetRoom = Game.rooms[creep.memory.source];
             
             if( targetRoom && creep.room.name != targetRoom.name ) {
                 var destRoom = new RoomPosition(25,25,targetRoom.name);
                 var result = creep.travelTo(destRoom, {visualizePathStyle: {stroke: '#ffffff'}});
             }
             else {
+
                 let result;
                 if(creep.memory.tempTarget) {
                     this.gotoTempTarget(creep);
@@ -141,6 +142,7 @@ var roleHarvester = {
                 let transports = _.filter( Game.creeps, (c) => {
                     return c.memory.role == "transport"
                 });
+
 
                 if( transports && transports.length > 0 ) {
                     for(var i=0;i<transports.length;i++) {
@@ -266,29 +268,22 @@ var roleHarvester = {
             //console.log(`getTransportCoverage transportList init 0`);
         }
 
-        var hasUpdate = false;
         var updatedTotalCoverage = 0;
         var updatedTransportList = [];
         for(var t in harvesterCreep.memory.transportList) {
             let transportCreep = Game.getObjectById(harvesterCreep.memory.transportList[t].id);
             //console.log(`getTransportCoverage transport id ${JSON.stringify(harvesterCreep.memory.transportList[t].id)}`);
-            if(!transportCreep) {
-                //console.log(`getTransportCoverage splice ${harvesterCreep.memory.transportList[t].id} out of ${JSON.stringify(harvesterCreep.memory.transportList)}`);
-                //harvesterCreep.memory.transportList.splice(t,1); // doen'st seem to work, so rather trying rebuild of updatedtransport list approach. refactor this out if works.
-                //console.log(`getTransportCoverage spliced ${harvesterCreep.memory.transportList[t].id} out of ${JSON.stringify(harvesterCreep.memory.transportList)}`);
-                hasUpdate = true;
-            }
-            else {
+            if(transportCreep)
                 if(transportCreep.memory.target == harvesterCreep.id){
                     updatedTotalCoverage += harvesterCreep.memory.transportList[t].coverage;
                     updatedTransportList.push(harvesterCreep.memory.transportList[t]);
                 }
                 //console.log(`getTransportCoverage updatedTotalCoverage += ${harvesterCreep.memory.transportList[t].coverage}`);
-            }
+            
         }
-        if( hasUpdate ) {
-            harvesterCreep.memory.transportCoverage = updatedTotalCoverage;
-        }
+        
+        harvesterCreep.memory.transportCoverage = updatedTotalCoverage;
+        
         //console.log(`getTransportCoverage updatedTotalCoverage finally ${updatedTotalCoverage}`);
         //console.log(`getTransportCoverage harvesterCreep.memory.transportCoverage finally ${harvesterCreep.memory.transportCoverage}`);
         harvesterCreep.memory.transportList = updatedTransportList;

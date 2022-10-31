@@ -1,196 +1,597 @@
 var Traveler = require('Traveler');
 var u = require('util.common');
+var taskCommon = require('task.common');
 
-/** Limitations
- * 1 - TO TEST check to see what harvester does at every RCL / base development level with its behaviour to make sure its robust
- * 2 - must specify source in memory parms when spawning and is currently manual
- * 
- */
+//Context
+var creepStateMachine = {
+    
+    stateList:[],
+    stateParms:[],
+    currentState:{},
+    currentParms:{},
+    
+    completedStates:[],
 
-
-/* Summary Behaviour
-
-** 1 - If creep has cargo capacity it will do following, otherwise it will go to number 5. First goal is to get the source object, but there's poitns of failure for it as follows;
-** 2 - If a source is not within vision it will not get the object id, so we have to see if the source is in our registered list of remoteSources and direct the creep there first
-** 3 - if we didn't have a source set from creep memory but the cause wasn't blindness to remote source objects, then default to second source then first source if that failed, in current room, and remember it
-** 4 - If we didn't successfully run the code for identifying and going to a remote source we are blind to, deduce that are we're either already at the remote source's room or we have a local one to harvest so lets harvest or move to the current room's source target
-
-** 5 - Alternative to number 1, it means we have no spare capacity in our cargo hold
-** 6 - if we have the memory static flag set, drop the resources we had in cargo on the ground
-** 7 - if the target property (which stores harvester's target room name) has a valid value of an existing game room, and its not the one the creep is in, move to it. Otherwise
-*/
-
-var roleHarvester = {
+    creep:{},
 
     /** @param {Creep} creep **/
     run: function(creep) {
-        // 1
-        if(creep.store.getFreeCapacity() > 0) {
-            var source = Game.getObjectById(creep.memory.source);
-            var wasRemoteRoom = false; // to check for blindness, not remoteness
-            
-            // 2
-            //TODO - i have vision of rooms so will know sources sometimes, i think it expires cache then triggers below eventually, but its stuck for many ticks at first
-            if(!source) {
-                //determine if remote before finding sources
-                _.forEach( Memory.rooms[creep.memory.homeRoom].remoteSources, (remoteSource) => {
-                    if(remoteSource.id == creep.memory.source) {
-                        var source = Game.getObjectById(creep.memory.source);
-                        if( source )
-                            creep.travelTo(new RoomPosition(source.pos.x,source.pos.y,remoteSource.room));
-                        else
-                            creep.travelTo(new RoomPosition(25,25,remoteSource.room)); // TODO - I think it can't see pos.x etc if no vision and this is backup, but can save with state machine
-                        wasRemoteRoom = true;
-                    }
-                })
-               
-                // 3
+        //pre-initialization validation
+        if(creep.spawning)
+            return;
 
-                //otherwise find local room sources
-                if( !wasRemoteRoom ) {
-                    var sources = creep.room.find(FIND_SOURCES);
-                    source = sources[1];
-                    if (!source) {
-                        source = sources[0];
-                    }
-                    creep.memory.source = source.id;
-                }
-            }
-
-            // 4
-            
-            if( !wasRemoteRoom ) {
-                var result = creep.harvest(source);
-                if(result == ERR_NOT_IN_RANGE) {
-                    creep.travelTo(source, {visualizePathStyle: {stroke: '#ffaa00'}});
-                }
-                else if(result == OK) {
-
-                    if( !creep.memory.baseRange ) {
-                        creep.memory.baseRange = this.getBaseRange(creep);
-                        creep.memory.transportCoverage = this.getTransportCoverage(creep);
-                    }
-                }
-            }
-            
-        }
-        // 5
+        //initialize
+        if( creep )
+            this.creep = creep;
+        
+        if( creep.memory.stateParms )
+            this.stateParms = creep.memory.stateParms;
         else {
+            if( creep.memory.role == "harvester" )
+                this.stateParms.push({memory:"source"});
+        }
 
-            // 6
-            //TO DO I don't think this is used or necessary anymore, and used to be manually set too.
-            if(creep.memory.static) {
-                // var containerBuild = creep.pos.isNearTo();
-                // if() {
-                //     creep.pos.isNearTo()
-                // }
-                
-                creep.drop(RESOURCE_ENERGY);
-                return;
+        if( creep.memory.stateList )
+            this.stateList = creep.memory.stateList;
+        else {
+            if( creep.memory.role == "harvester" )
+                this.stateList.push("stateHarvest");
+        }
+
+        this.currentState = _.last(this.stateList);
+        this.currentParms = _.last(this.stateParms);
+
+        //execute
+        if(this.stateList.length > 0)
+            this.stateRun();
+    },
+
+    stateRun() {
+        u.debug(this.stateList,`harvester current state`);
+        u.debug(this.stateParms,`harvester current state`);
+        u.debug(this.currentState,`harvester current state`);
+
+        if( !_.includes(this.completedStates,this.currentState) ) {
+            switch(this.currentState) {
+                case "stateHarvest": stateHarvest.run(this.currentParms, this); break;
+                case "stateTravel": stateTravel.run(this.currentParms, this); break;
+                case "stateEmptyStore": stateEmptyStore.run(this.currentParms, this); break;
+                case "stateCooldown": stateCooldown.run(this.currentParms, this); break;
+                default:
+                    this.stateRemove();
+                    break;
             }
+        }
+    },
 
-            if(creep.memory.stripMiner) {
-                var source = Game.getObjectById(creep.memory.source);
-                var result = creep.harvest(source);
-                if(result == ERR_NOT_IN_RANGE) {
-                    creep.travelTo(source, {visualizePathStyle: {stroke: '#ffaa00'}});
+    stateAdd( state, stateParms = {} ) {
+        u.debug(state,`stateAdd`);
+
+        //validate
+        if(!state )
+            u.debug(state,`trying to add a falsey state`);
+        //execute
+        else {            
+            this.stateList.push(state);
+            this.stateParms.push(stateParms);
+
+            this.completedStates.push(this.currentState);
+
+            this.currentState = _.last(this.stateList);
+            this.currentParms = _.last(this.stateParms);
+            this.stateRun();
+        }
+    },
+
+    stateRemove() {
+        u.debug(this.currentState,`stateRemove`);
+
+        this.completedStates.push(this.currentState);
+
+        if(this.stateList.length > 1) {
+            this.stateList.pop();
+            this.stateParms.pop();
+
+            this.currentState = _.last(this.stateList);
+            this.currentParms = _.last(this.stateParms);
+        }
+        this.stateRun();
+    },
+
+    stateSave() {
+        this.creep.memory.stateList = this.stateList;
+        this.creep.memory.stateParms = this.stateParms;
+
+        delete this.completedStates;
+    }
+}
+
+var stateHarvest = {
+
+    run: function(stateParms, stateMachine) {
+        let creep = stateMachine.creep;
+        let result = creepTask.taskHarvestResource(creep,stateParms);
+
+        // u.debug(result,`harvest result code`);
+
+        switch(result) {
+            case ERR_NOT_IN_RANGE: //not close enough to harvest
+            case ERR_NOT_FOUND: //can't see target, maybe blind to room
+            case ERR_INVALID_TARGET: //can't see target, maybe blind to room
+                u.debug(result,`in first 3 error switches`);
+                stateMachine.stateAdd("stateTravel",{memory:'source'});
+                break;
+            case ERR_NOT_ENOUGH_RESOURCES: //only expect this with regenerating sources
+            case ERR_TIRED: //only expect this with minerals and things with cooldowns
+                // u.debug(result,`in tired error switch`);
+                stateMachine.stateAdd("stateCooldown",{memory:'source'});
+                break;
+            case OK:
+                // u.debug(result,`in OK switch`);
+                creepRole.event(creep,"stateHarvest",result);
+                if(creep.store.getFreeCapacity() == 0) {
+                    // u.debug(result,`in no free capacity switch`);
+                    stateMachine.stateAdd( creepRole.getJob(creep.memory.role) );
                 }
-                return;
+                break;
+            case ERR_FULL:
+                // u.debug(result,`in ERR_FULL switch`);
+                stateMachine.stateAdd( creepRole.getJob(creep.memory.role) );
+                break;
+            default:
+                stateMachine.stateRemove();
+                break;
+        }
+    }
+}
+
+var stateTravel = {
+    run: function(stateParms, stateMachine) {
+        let creep = stateMachine.creep;
+        let result = creepTask.taskTravel(creep,stateParms);
+
+        u.debug(result,`stateTravel for creep ${creep.name}`);
+
+        switch(result) {
+            case ERR_TIRED: //wait until fatigue is zero, do nothing
+                break;
+            case ERR_INVALID_TARGET:
+            case ERR_NOT_FOUND:
+                u.debug(result,`stateTravel for creep ${creep.name} got bad result, removing from state stack`);
+            case OK:
+            default:
+                stateMachine.stateRemove();
+                break;
+        }
+    }
+}
+
+// it is best to set supplyTargets for anything that needs to be emptied e.g. harvesters when they are created
+var stateEmptyStore = {
+    run: function(stateParms, stateMachine) {
+        //initialize
+        let result = false;;
+        let creep = stateMachine.creep;
+        let stateParmKeys = Object.keys( stateParms );
+        let targetParm = creepRole.resolveLogisticsTarget(creep);
+
+        // u.debug(targetParm,`stateEmptyStore pre validate`);
+
+        //validate
+        if( !targetParm ) {
+            //try to find and save a validTarget if none set
+            targetParm = creepRole.findLogisticsTarget(creep);
+            //if that fails or we ourselves are the logistics target, just drop all resources
+            if( !targetParm || targetParm.id == creep.id ) {
+                // u.debug(creep.store,`stateEmptyStore pre drop logic`);
+                for(const resourceType in creep.store) {
+                    result = creep.drop(resourceType);
+                    // u.debug(resourceType,`stateEmptyStore in drop logic`);
+                    if( result == OK )
+                        break;
+                }
+                // u.debug(result,`stateEmptyStore post drop logic result`);
             }
-            
-            // 7
-            
-            var targetRoom = Game.rooms[creep.memory.target];
-            
-            if( targetRoom && creep.room.name != targetRoom.name ) {
-                var destRoom = new RoomPosition(25,25,targetRoom.name);
-                var result = creep.travelTo(destRoom, {visualizePathStyle: {stroke: '#ffffff'}});
+        }
+
+        // u.debug(targetParm,`stateEmptyStore pre taskTransfer`);
+
+        if( !result )
+            result = creepTask.taskTransfer(creep,targetParm);
+
+        switch(result) {
+            case ERR_NOT_IN_RANGE:
+                // u.debug(result,`in stateEmptyStore ERR_NOT_IN_RANGE switch`);
+                stateMachine.stateAdd("stateTravel",targetParm);
+                break;
+            case ERR_INVALID_TARGET:
+            case ERR_NOT_FOUND:
+            case OK:
+            default:
+                stateMachine.stateRemove();
+                break;
+        }      
+    }
+}
+
+/**
+ * Looks in creep memory cooldown or determines where to set cooldown from based on memory arg object type
+ */
+var stateCooldown = {
+    run: function(stateParms, stateMachine) {
+        //initialize
+        let creep = stateMachine.creep;
+        let cooldown = creep.memory.cooldown;
+
+        //validate and execute
+        if( cooldown )
+            if( Game.time >= cooldown ) {
+                delete creep.memory.cooldown;
+                return OK;
             }
             else {
-                let result;
-                if(creep.memory.tempTarget) {
-                    this.gotoTempTarget(creep);
-                    return;
+                return ERR_TIRED;
+            }
+        else {
+            if(stateParms.memory) {
+                let cooldownSource = Game.getObjectById(creep.memory[stateParms.memory]);
+                if( cooldownSource instanceof Mineral ) {
+                    let extractor = creep.pos.findInRange(FIND_STRUCTURES, 1, {
+                        filter: (structure) => {
+                            return structure.structureType == STRUCTURE_EXTRACTOR;
+                        }
+                    });
+                    if( extractor && extractor.cooldown )
+                        creep.memory.cooldown = Game.time + extractor.cooldown;
                 }
+            }
+            if( creep.memory.cooldown )
+                return ERR_TIRED;
+        }
+    }
+}
 
-                let link;
-                if(creep.memory.link) {
-                    link = Game.getObjectById(creep.memory.link);
-                    if(creep.memory.transportList) {
-                        this.clearLinkedTransports(creep);
-                        creep.memory.transportCoverage = -1; //-1 is handled as a flag not to process transport validation and re-setup transportData
-                    }
+var creepTask = {
+
+    /**
+     * Harvests resource by id from taskParms.memory key or closest Source
+     * @param {Creep} creep 
+     * @param {Collection} taskParms 
+     * @returns Screeps Result Codes
+     */
+    taskHarvestResource: function(creep,taskParms) {
+        //initialize
+        //let taskParmKeys = Object.keys(taskParms);
+        let resourceId;
+        let taskParmLocation = taskParms.memory;
+        if( taskParmLocation )
+            resourceId = creep.memory[taskParmLocation];
+        
+        let resource = Game.getObjectById(resourceId);
+
+        //validate
+        if( !resource ) {
+            resource = creep.pos.findClosestByPath(FIND_SOURCES);
+            creep.memory[taskParmLocation] = resource.id;
+        }
+
+        if(creep.store.getFreeCapacity() == 0)
+            return ERR_FULL;
+
+        if(!resource)
+            return ERR_NOT_FOUND;
+        
+        //execute
+        let result = creep.harvest( resource );
+        return result;
+    },
+    
+
+    /**
+     * Travels to target with taskParms.roomPos or taskParms.memory value
+     * @param {Creep} creep 
+     * @param {Collection} taskParms 
+     * @returns 
+     */
+     taskTravel: function(creep, taskParms) {
+        //initialize
+        let destPos;
+        let taskParmKeys = Object.keys(taskParms);
+        if( _.includes(taskParmKeys, "roomPos") ) {
+            destPos = new RoomPosition(
+                taskParms.roomPos.x,
+                taskParms.roomPos.y,
+                taskParms.roomPos.room,
+            );
+        }
+        else if( _.includes(taskParmKeys, "memory") ) {
+            destPos = Game.getObjectById(creep.memory[taskParms.memory]).pos;
+            //if we still can't see it, assume room blindness and do lookups on memory storage
+            if( !destPos ) {
+                destPos = creepRole.resolveTravelTarget(creep,taskParms);
+            }
+        }
+
+        //validate
+        if(!destPos)
+            return ERR_NOT_FOUND;
+
+        //execute
+        let travelParms;
+        if( taskParms.travel )
+            travelParms = taskParms.travel;
+        else
+            travelParms = {};
+
+        let result = creep.travelTo(destPos,travelParms);
+        return result;
+    },
+
+    /**
+     * 
+     * @param {Creep} creep 
+     * @param {Collection} taskParms 
+     * @returns 
+     */
+    taskTransfer: function(creep,taskParms) {
+        //initialize
+        let result = false;
+        let taskParmKeys = Object.keys(taskParms);
+
+        //execute
+        if( _.includes(taskParmKeys, "memory") ) {
+            let transferTarget = Game.getObjectById(creep.memory[taskParms.memory]);
+            if( transferTarget )
+                if( creep.pos.isNearTo(transferTarget))
+                    result = creep.transfer(transferTarget);
+                else
+                    result = ERR_NOT_IN_RANGE;
+            else
+                result = ERR_NOT_FOUND;
+        }
+        return result;
+    }
+
+}
+
+var creepRole = {
+
+    getJob: function(role) {
+        let job = false;
+
+        switch(role) {
+            case "harvester":
+            case "transport":
+                job = "stateEmptyStore";
+                break;
+            case "builder":
+                job = "stateBuild";
+                break;
+            case "repairer":
+                job = "stateRepair";
+                break;
+            case "upgrader":
+                job = "stateUpgrade";
+                break;
+            default:
+                break;
+        }
+
+        return job;
+    },
+
+    event: function(creep,state,result) {
+
+        switch(state) {
+            case "stateHarvest":
+                this.stateHarvestEvent(creep,result);
+                break;
+            default:
+                break;
+        }
+    },
+
+    stateHarvestEvent: function(creep,result) {
+        switch(creep.memory.role) {
+            case "harvester":
+                switch(result) {
+                    case OK:
+                        if(!creep.memory.baseRange) {
+                            creep.memory.baseRange = roleHarvester.getBaseRange(creep);
+                            creep.memory.transportCoverage = roleHarvester.getTransportCoverage(creep);
+                        }
+                        break;
+                    default:
+                        break;
                 }
+                break;
+            default:
+                break;
+        }
+    },
 
-                if(!link) {
-                    this.assignLink(creep)
+    /**
+     * Finds a target to supply or dropoff Resources at by creep roles
+     * @param {Creep} creep 
+     */
+    findLogisticsTarget: function(creep) {
+
+        let validTargetTypes = []; // Structure | Creep
+        let validTargetKeys = []; // Structure -> structureType | Creep -> memory.role[keys]
+        let validTargetValues = []; // structureType -> STRUCTURE_EXTENSION | memory.role[key] -> transport
+        let logisticsTarget = false;
+
+        switch(creep.memory.role) {
+            case "harvester":
+                if(!creep.memory.link && Memory.rooms[creep.room.name].links && Memory.rooms[creep.room.name].links.length > 2) {
+                    this.assignLink(creep);
                     if(creep.memory.link) {
-                        link = Game.getObjectById(creep.memory.link);
-                        this.clearLinkedTransports(creep);
+                        logisticsTarget = Game.getObjectById(creep.memory.link);
+                        roleHarvester.clearLinkedTransports(creep);
                         creep.memory.transportCoverage = -1; //-1 is handled as a flag not to process transport validation and re-setup transportData
+                        break; //breaks switch
                     }
                 }
 
-                if(link && (link.store.getFreeCapacity(RESOURCE_ENERGY) > 50) ) {
-                    creep.transfer(link,RESOURCE_ENERGY);
-                    return;
-                }
-
-                //TODO must handle this in statemachine as its expensive every tick - also check initializer check for transport presence in home room
-                //check if we have transports before dropping on floor at source
-                let transports = _.filter( Game.creeps, (c) => {
-                    return c.memory.role == "transport"
+                //couldn't assign link with early switch break, so check if we have active transports assigned to us
+                let servicingTransports = _.filter( Game.creeps, (c) => {
+                    return (c.memory.role == "transport" && c.memory.target == creep.id)
                 });
 
-                if( transports && transports.length > 0 ) {
-                    for(var i=0;i<transports.length;i++) {
-                        if(creep.pos.isNearTo(transports[i])) {
-                            result = transports[i].withdraw(creep,RESOURCE_ENERGY);
-                            if(result == OK) {
-                                let source = Game.getObjectById(creep.memory.source);
-                                result = creep.harvest(source);
-                                if(result == OK) {
-                                    return;
-                                }
-                            }
+                // u.debug(servicingTransports,`servicingtransports found`);
+
+                if( servicingTransports.length > 0 ) {
+                    for( let t in servicingTransports ) {
+                        // u.debug(creep.pos.isNearTo(servicingTransports[t]),`servicingtransports creep.pos.isNearTo(servicingTransports[t])`);
+                        if( creep.pos.isNearTo(servicingTransports[t]) ) {
+                            logisticsTarget = servicingTransports[t];
+                            // u.debug(logisticsTarget,`servicingtransports logisticsTarget`);
                         }
                     }
-                    creep.drop(RESOURCE_ENERGY);
-                    return;
+
+                    // u.debug(logisticsTarget,`servicingtransports post for`);
+
+                    //if we didn' thave one next to us, we'll use ourselves as a logistics target which will be used to signal for dropping resources
+                    if( !logisticsTarget ) {
+                        // u.debug(logisticsTarget,`servicingtransports self set`);
+                        logisticsTarget = creep;
+                    }
+                    
+                    break; //breaks switch
                 }
 
-                //if no transports, we must deliver to spawn sources
-                var targets = creep.room.find(FIND_STRUCTURES, {
+                // if( transports && transports.length > 0 ) {
+                //     for(var i=0;i<transports.length;i++) {
+                //         if(creep.pos.isNearTo(transports[i])) {
+                //             result = transports[i].withdraw(creep,RESOURCE_ENERGY);
+                //             if(result == OK) {
+                //                 let source = Game.getObjectById(creep.memory.source);
+                //                 result = creep.harvest(source);
+                //                 if(result == OK) {
+                //                     return;
+                //                 }
+                //             }
+                //         }
+                //     }
+                //     creep.drop(RESOURCE_ENERGY);
+                //     return;
+                // }
+
+
+                //couldn't assign link or just drop for transports, do following
+                let targets = creep.room.find(FIND_STRUCTURES, {
                     filter: (structure) => {
                         return (structure.structureType == STRUCTURE_EXTENSION ||
                             structure.structureType == STRUCTURE_SPAWN ) &&
                             structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
                     }
                 });
-                
-                if(targets[0]) {
-                    creep.memory.tempTarget = targets[0].id;
+                if( targets.length > 0 ) {
+                    logisticsTarget = targets[0];
+                    creep.memory.dropoffTarget = logisticsTarget.id;
+                    break;
                 }
-                else {
-                    creep.drop(RESOURCE_ENERGY); //failsafe to stop deadlock fatal error that stops spawn from working
-                }
-            
-                this.gotoTempTarget(creep);
-                
-            }
+                break;
+            case "transport":
+                //TODO
+                break;
+            default:
+                break;
         }
+
+        // u.debug(logisticsTarget,`servicingtransports end function return`);
+
+        return logisticsTarget;
     },
 
-    gotoTempTarget: function(creep) {
-        var result = creep.transfer(Game.getObjectById(creep.memory.tempTarget), RESOURCE_ENERGY); //overridden by drop but compensating with transports for now.
-            
-        if(result == ERR_NOT_IN_RANGE) {
-            creep.travelTo(Game.getObjectById(creep.memory.tempTarget), {visualizePathStyle: {stroke: '#ffffff'}});
+    /**
+     * Generic find function e.g Harvesters can't always see remote Sources so resolve check room remoteSource list
+     * @param {Creep} creep 
+     * @param {Collection} taskParms 
+     * @returns 
+     */
+    resolveTravelTarget: function(creep,taskParms) {
+        //initialize
+        let destPos = false;
+        let taskParmKeys = Object.keys(taskParms);
+
+        //execute
+        if( _.includes(taskParmKeys, "memory") ) {
+            switch( taskParms.memory ) {
+                case "source":
+                default:
+                    destPos = roleHarvester.checkRemoteResource(creep.memory[taskParms.memory]);
+                    break;
+            }
         }
-        else if( result == OK ) {
-            delete creep.memory.tempTarget;
-            //creep.drop(RESOURCE_ENERGY); //failsafe to stop running back to source with energy in storage fatal error that stops spawn from working
+
+        return destPos;
+    },
+
+    /**
+     * Retrieves dropOff target for creep - Different roles have different ways of storing dropOffTargets
+     * @param {Creep} creep 
+     * @returns 
+     */
+    resolveLogisticsTarget: function(creep) {
+        //initialize
+        let resolveList = [];
+        resolveList.push(["supplyTarget","dropoffTarget"]);
+        if( creep.memory.role == "harvester" )
+            resolveList.push(["link"]);
+
+        //validate
+        let validTargets =  _.filter( resolveList, function(memoryLocation) {
+            let t = Game.getObjectById(creep.memory[memoryLocation]);
+            if( !t ) delete creep.memory[memoryLocation];
+            return t;
+        });
+
+        //execute
+        if( validTargets.length > 0 )
+            return validTargets[0];
+        else
+            return false;
+    },
+
+    assignLink(creep) {
+        let links = Game.rooms[creep.room.name].find(FIND_MY_STRUCTURES, {
+            filter: (structure) => {
+                return (structure.structureType == STRUCTURE_LINK)
+            }});
+
+        _.forEach( links, (l) => {
+            if(l.pos.isNearTo(creep)) {
+                creep.memory.link = l.id;
+                return false; //breaks lodash foreach
+            }
+        });
+
+    },
+
+}
+
+var roleHarvester = {
+
+    run: function(creep) {
+        creepStateMachine.run(creep);
+        creepStateMachine.stateSave();
+    },
+
+    checkRemoteResource: function(objectId) {
+        let roomPos = false;
+        //determine if remote mining and is blind
+        for( let r in Memory.rooms ) {
+            _.forEach( Memory.rooms[r].remoteSources, (remoteSource) => {
+                if(remoteSource.id == objectId) {
+                    roomPos = new RoomPosition(remoteSource.x,remoteSource.y,remoteSource.room);
+                    return false; //breaks the foreach
+                }
+            });
+            if(roomPos)
+                break; //breaks the for
         }
+        return roomPos;
     },
 
     /** @param {Creep} creep **/
@@ -266,29 +667,21 @@ var roleHarvester = {
             //console.log(`getTransportCoverage transportList init 0`);
         }
 
-        var hasUpdate = false;
         var updatedTotalCoverage = 0;
         var updatedTransportList = [];
         for(var t in harvesterCreep.memory.transportList) {
             let transportCreep = Game.getObjectById(harvesterCreep.memory.transportList[t].id);
             //console.log(`getTransportCoverage transport id ${JSON.stringify(harvesterCreep.memory.transportList[t].id)}`);
-            if(!transportCreep) {
-                //console.log(`getTransportCoverage splice ${harvesterCreep.memory.transportList[t].id} out of ${JSON.stringify(harvesterCreep.memory.transportList)}`);
-                //harvesterCreep.memory.transportList.splice(t,1); // doen'st seem to work, so rather trying rebuild of updatedtransport list approach. refactor this out if works.
-                //console.log(`getTransportCoverage spliced ${harvesterCreep.memory.transportList[t].id} out of ${JSON.stringify(harvesterCreep.memory.transportList)}`);
-                hasUpdate = true;
-            }
-            else {
+            if(transportCreep)
                 if(transportCreep.memory.target == harvesterCreep.id){
                     updatedTotalCoverage += harvesterCreep.memory.transportList[t].coverage;
                     updatedTransportList.push(harvesterCreep.memory.transportList[t]);
                 }
                 //console.log(`getTransportCoverage updatedTotalCoverage += ${harvesterCreep.memory.transportList[t].coverage}`);
-            }
+            
         }
-        if( hasUpdate ) {
-            harvesterCreep.memory.transportCoverage = updatedTotalCoverage;
-        }
+        
+        harvesterCreep.memory.transportCoverage = updatedTotalCoverage;
         //console.log(`getTransportCoverage updatedTotalCoverage finally ${updatedTotalCoverage}`);
         //console.log(`getTransportCoverage harvesterCreep.memory.transportCoverage finally ${harvesterCreep.memory.transportCoverage}`);
         harvesterCreep.memory.transportList = updatedTransportList;
@@ -321,28 +714,53 @@ var roleHarvester = {
         harvesterCreep.memory.transportList.push(transportRegister);
     },
 
-    assignLink(creep) {
-        let links = Game.rooms[creep.room.name].find(FIND_MY_STRUCTURES, {
-            filter: (structure) => {
-                return (structure.structureType == STRUCTURE_LINK)
-            }});
-
-        _.forEach( links, (l) => {
-            if(l.pos.isNearTo(creep)) {
-                creep.memory.link = l.id;
-                return false; //breaks lodash foreach
-            }
-        });
-
-    },
-
     clearLinkedTransports(creep) {
         _.forEach(creep.memory.transportList, (transportData) => {
             let transport = Game.getObjectById(transportData.id);
             delete transport.memory.target;
         });
         delete creep.memory.transportList;
+    }/*,
+    
+    taskEmptyStore: function(creep,taskParms) {
+
+        //TODO must handle this in statemachine as its expensive every tick - also check initializer check for transport presence in home room
+        //check if we have transports before dropping on floor at source
+        let transports = _.filter( Game.creeps, (c) => {
+            return c.memory.role == "transport"
+        });
+
+
+        if( transports && transports.length > 0 ) {
+            for(var i=0;i<transports.length;i++) {
+                if(creep.pos.isNearTo(transports[i])) {
+                    result = transports[i].withdraw(creep,RESOURCE_ENERGY);
+                    if(result == OK) {
+                        let source = Game.getObjectById(creep.memory.source);
+                        result = creep.harvest(source);
+                        if(result == OK) {
+                            return;
+                        }
+                    }
+                }
+            }
+            creep.drop(RESOURCE_ENERGY);
+            return;
+        }
+            
+        
     }
+*/
+    // gotoTempTarget: function(creep) {
+    //     var result = creep.transfer(Game.getObjectById(creep.memory.tempTarget), RESOURCE_ENERGY); //overridden by drop but compensating with transports for now.
+            
+    //     if(result == ERR_NOT_IN_RANGE) {
+    //         creep.travelTo(Game.getObjectById(creep.memory.tempTarget), {visualizePathStyle: {stroke: '#ffffff'}});
+    //     }
+    //     else if( result == OK ) {
+    //         delete creep.memory.tempTarget;
+    //     }
+    // },
 };
 
 module.exports = roleHarvester;
