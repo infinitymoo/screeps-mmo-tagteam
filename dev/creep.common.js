@@ -19,19 +19,22 @@ var creepCommon = {
     
             try {
                 if(!creep.spawning) {
-
-                    if(creep.memory.class = 'worker') {
-                        this.doJob(creep);                        
+                    if(creep.memory.fleeing) {
+                        this.fleeRoom(creep);
+                        return;
                     }
-                    // if(creep.memory.role == 'upgrader') {
-                    //     roleUpgrader.run(creep);
+                    // if(creep.memory.class = 'worker') {
+                    //     this.doJob(creep);                        
                     // }
-                    // if(creep.memory.role == 'builder') {
-                    //     roleBuilder.run(creep);
-                    // }
-                    // if(creep.memory.role == 'repairer') {
-                    //     roleRepairer.run(creep);
-                    // }
+                    if(creep.memory.role == 'upgrader') {
+                        roleUpgrader.run(creep);
+                    }
+                    if(creep.memory.role == 'builder') {
+                        roleBuilder.run(creep);
+                    }
+                    if(creep.memory.role == 'repairer') {
+                        roleRepairer.run(creep);
+                    }
                 
                     if(creep.memory.role == 'harvester') {
                         roleHarvester.run(creep);
@@ -60,48 +63,20 @@ var creepCommon = {
         }
     },
 
-    doJob(creep) {
-        //initialization
-        let completedTasks = [];
-        let taskList = creep.memory.taskList;
-        let taskData = creep.memory.taskData;
-
-        //validation
-        if(!taskList) creep.memory.taskList = [];
-        if(!taskData) creep.memory.taskData = {};
-
-        //execution
-        let continueState = true;
-        while( continueState ) {
-            continueState = this.stateProcessStack(creep,taskList,taskData);
-        }
-
-        //update state
-    },
+    fleeRoom: function(creep) {
     
-    stateProcessPositioning(creep,taskList,taskData) {
-        let targetPosition = creep.memory.target;
-        if(!this.isInPositionAtTarget(creep) ) {
-            creep.travelTo(targetPosition);
+        //if fleeing a room we were working in or in another threatened room while fleeing on the way to safety, go home
+        if( creep.room.name == creep.memory.fleeing || Memory.rooms[creep.room.name].defending) {
+            let homeController = Game.rooms[creep.memory.homeRoom].controller;
+            creep.travelTo(homeController);
+            return;
         }
-    },
+        //we don't have to go all the way home, we can chill in a safe room next door
+        else
+            creep.travelTo(creep.room.controller);
 
-    isInPositionAtTarget(creep) {
-
-    },
-    
-    stateProcessStack(creep,taskList,taskData,taskComplete = false) {
-        let currentTask = taskList.pop();
-        let currentData = taskData.pop();
-        
-        this.stateProcessPositioning(creep,taskList,taskData);
-        this.stateProcessTask(creep,taskList,taskData);
-
-        let taskCompleted = taskCommon[currentTask](creep,taskData);
-        if( taskCompleted )
-            this.stateProcessStack(creep,taskList,taskData,currentTask);
-        
-
+        if( !Memory.rooms[creep.memory.fleeing].defending )
+            delete creep.memory.fleeing;        
     },
 
     /**
@@ -125,6 +100,10 @@ var creepCommon = {
         taskCommon.upgradeController(creep);
     }
 
+}
+
+var taskHarvest = function(creep,target) {
+    return creep.harvest(target);
 }
 
 module.exports = creepCommon;

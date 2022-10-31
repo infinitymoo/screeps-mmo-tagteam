@@ -15,40 +15,35 @@ https://github.com/NesCafe62/screeps-pathfinding
 = High Priority =
 1 - Change tracking of Object Of Omportance
 	1.1 - intelDB {
-			survey[roomName]: {
-				resourceNode: [{type:string, //energy, powerbank, commodity, mineral - i.e. resource type
-							id:string,
-							timer:number,
-							x:number,
-							y:number}],
-				sourceKeeperNodes[]: {
-							spawnTick:number, //-1 when no spawn tick, positive gametime number when it has active countdown
-							x:number,
-							y:number}
-				}
-				linkedRooms[roomName]: {
-					direction:number,
-					roomName:string
-				}
-			},
-			activity[roomName]: {
-				Timestamp:number,
-				owner:string,
-				hostileStructures:[Structure],
-				hostileCreeps:[Creep],
-				scavengeTargets[]: {
-					type:string, //tombstone,dropped resource,ruin, etc
-					expiryTick:number, //calculated upon population of gameticks+tickstolive
-					id:string,
-					x:number,
-					y:number
+			roomName[] : {
+				survey: {
+					poi: [{type:string, //sourcekeeper lair, energysource, powerbank, commodity, mineral etc.
+								id:string,
+								timer:number,
+								timestamp:number,
+								x:number,
+								y:number}],
+					linkedRooms[]: {
+						direction:number,
+						roomName:string
+					}
+				},
+				activity: {
+					timestamp:number,
+					threatLevel:number,
+					owner:string,
+					hostileStructures:[Structure],
+					hostileCreeps:[Creep],
+					scavengeTargets[]: {
+						type:string, //tombstone,dropped resource,ruin, etc
+						expiryTick:number, //calculated upon population of gameticks+tickstolive
+						id:string,
+						x:number,
+						y:number
+					}
 				}
 			}
 		}
-	1.2 - rooms[] {
-			resourcesNode[]
-		}
-
 
 
 3 - Sorting of spawn queue with new additions e.g. When harvesters die, i must prioritize the one with the closest to base to be respawned next, not just any one.
@@ -109,3 +104,72 @@ warden system - each room has warden object that links like network to base thro
 // base building logic
 // - must leave space around edges of base to move because things can get stuck if structures are adjacent to mountains
 // - 
+
+
+
+
+
+
+
+******************** TASKS
+Task Parms Standard (availableCreep, target {type,id,rate}, targetRoomPosition, priority)
+TASK_TRAVEL_TARGET (taskParms, taskParms.custom.travelOptions)
+ - dependencies:
+ 	STATE_ROOM_PEACEFUL
+	AVAILABLE_CREEP
+
+ - states:
+	FINISHED //completed task
+	ACTIVE //successful harvest action
+	COOLDOWN //fatigue or stuck wait
+	FAIL //no move parts or room not peaceful
+
+TASK_HARVEST_RESOURCE (taskParms)
+ - preferences:
+	DESIGN_STATIC
+
+ - dependencies:
+	ROOM_VISIBLE
+	HAS_CAPACITY
+ 	STATE_ROOM_PEACEFUL
+	AVAILABLE_CREEP
+	- BODYPART_WORK
+
+ - states:
+	ACTIVE //successful harvest action
+	COOLDOWN //regen or mineral extractor cooldowns
+	FAIL //some resources can finish e.g. commodities
+
+TASK_EMPTY_STORE
+
+ 
+TASK_FETCH_RESOURCE (taskParms, taskParms.custom.threshold)
+
+ - dependencies:
+ 	STATE_ROOM_PEACEFUL
+	AVAILABLE_CREEP
+	!DESIGN_STATIC
+
+TASK_SUPPLY_RESOURCE (taskParms)
+ - dependencies:
+	AVAILABLE_CREEP
+	- BODYPART_WORK
+
+TASK_BUILD_STRUCTURE
+ - dependencies:
+
+TASK_REPAIR_STRUCTURE (taskParms, taskParms.custom.threshold)
+
+TASK_SPAWN_CREEP (class,role,goal)
+
+
+
+
+threshold {
+	attSubject: thisCreep | target //e.g. creep.attName=store.attFunc=getUsedCapacity(attFuncParms=RESOURCE_ENERGY)
+	attFunc?: functionName
+	attFuncParms?: functionParms
+	attName?: string
+	attValue: any
+	attOperator : string ("==","<=",">=","<",">")
+}

@@ -141,8 +141,8 @@ var roleTransport = {
                 var result;
                 //this code starts to look for energy dropped by typically harvesters to pick it up, but swamps screws with 2 range because its slow to travel on them so parm is 4 range.
                 if(creep.pos.isNearTo(target)) { //small swamps can screw up 2 range, so make it 4 before looking for dropped res
+                    //TODO this bugs out if energy is next to creep behind it because it won't pick up harvester drops then. Try get resource on harvester's position instead.
                     var source = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES);
-                    
                     if( source && creep.pos.isNearTo(source) && target.pos.isNearTo(source) ) {
                         result = creep.pickup(source);
                         if( result == ERR_NOT_IN_RANGE) {
@@ -156,9 +156,18 @@ var roleTransport = {
                     //if nothing on ground near target, withdraw from creep or tombstone (or ruin?) directly 
                     //TODO withdraw any resource not just energy
                     else {
-                        let targetCreep = Game.getObjectById(creep.memory.target);
-                        if( targetCreep.store.getFreeCapacity(RESOURCE_ENERGY) == 0)
-                            result = creep.withdraw(targetCreep,RESOURCE_ENERGY);
+                        let target = Game.getObjectById(creep.memory.target);
+                        if( !target ) {
+                            delete creep.memory.target;
+                            return;
+                        }
+
+                        //testing this to see if bug still occuring
+                        if( target instanceof Resource )
+                            result = creep.pickup(target);
+                        else if( target.store.getFreeCapacity(RESOURCE_ENERGY) == 0)
+                            result = creep.withdraw(target,RESOURCE_ENERGY);
+
                         if( result == ERR_INVALID_TARGET)
                             result = target.transfer(creep,RESOURCE_ENERGY);
                         if( result == ERR_NOT_IN_RANGE) {

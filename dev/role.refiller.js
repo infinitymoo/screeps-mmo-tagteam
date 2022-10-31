@@ -98,6 +98,12 @@ var u = require('util.common');
                     }
                 });
                 
+                //first section above will targetLock link that may not be filled since link is reserved at 220 levels
+                if(target && target.structureType == STRUCTURE_LINK && !this.linkIsValidRefillTarget(creep)) {
+                    this.getNewRefillTarget(creep,targets);
+                    target = Game.getObjectById(creep.memory.targetLock);
+                }
+                
                 if(targets.length > 1) {
                     for(var i=1;i<targets.length;i++) {
                         if(creep.pos.isNearTo(targets[i])) {
@@ -257,6 +263,11 @@ var u = require('util.common');
     },
 
     emptyBaseLinkEnergy(creep, doTravel = false) {
+
+        //Exception seems to get thrown when refiller dies or something - no other reason i can think of makes it not find the room in memory to check its links
+        if(!Game.creeps[creep.name])
+            return;
+
         let roomLinks = Memory.rooms[creep.room.name].links;
         let result;
         if ( Object.keys(roomLinks).length > 2 ) {

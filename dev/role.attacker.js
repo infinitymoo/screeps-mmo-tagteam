@@ -13,14 +13,18 @@ var roleAttacker = {
                 if(creep.room.name != creep.memory.targetRoom) {
                     isRemoteRoom = true;
 
-                    let result = creep.travelTo(new RoomPosition(25,25,creep.memory.targetRoom),{range:1}); //TODO better way to determine room entry e.g. hostile position, retrieved from hostile alert saved(todo) somewhere?
+                    let result = creep.travelTo(new RoomPosition(25,25,creep.memory.targetRoom),{range:10}); //TODO better way to determine room entry e.g. hostile position, retrieved from hostile alert saved(todo) somewhere?
                     return;
                 }
                 
                 if(!isRemoteRoom) {
                     target = creep.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
-                    if(target)
+                    if(target && target.hits !== 0 )
                         creep.memory.target = target.id;
+                    else {
+                        if( Memory.rooms[creep.room.name].defending )
+                            delete Memory.rooms[creep.room.name].defending;
+                    }
                 }
                 
                 if(!target) {
