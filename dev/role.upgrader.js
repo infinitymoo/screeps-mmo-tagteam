@@ -53,7 +53,7 @@ var roleUpgrader = {
     },
 
     getEnergy(creep) {
-        var source = taskCommon.getClosestEnergy(creep);
+        var source = taskCommon.getClosestAvailableEnergy(creep);
         
         if(source) {                        
             var result;

@@ -97,7 +97,7 @@ var roleBuilder = {
             }
             else { //TODO roadworkers sometimes get stuck on room edges sometimes no idea how/why, must still debug that.
 
-                var source = taskCommon.getClosestEnergy(creep);
+                var source = taskCommon.getClosestAvailableEnergy(creep);
                 var collectionMethod;
 
                 if(source instanceof Structure)
