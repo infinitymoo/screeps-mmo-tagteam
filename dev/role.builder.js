@@ -6,13 +6,22 @@ var roleBuilder = {
     /** @param {Creep} creep **/
     run: function(creep) {
         try {
-            if(creep.memory.building && creep.store[RESOURCE_ENERGY] == 0) {
+            if(creep.memory.building && creep.store[RESOURCE_ENERGY] == 0 && !(creep.memory.targetRoom && creep.memory.targetRoom != creep.room.name )) {
                 creep.memory.building = false;
                 creep.say('🔄');
             }
             if((!creep.memory.building && creep.store[RESOURCE_ENERGY] != 0) && (!creep.memory.hasHarvested || creep.memory.hasHarvested == 0 || creep.store.getFreeCapacity() == 0)) {
+                delete creep.memory.hasHarvested;
+                delete creep.memory.source;
                 creep.memory.building = true;
                 creep.say('🚧');
+            }
+                
+            if (creep.memory.targetRoom && creep.room.name == creep.memory.targetRoom && (creep.pos.x == 0 || creep.pos.x == 49) || (creep.pos.y == 0 || creep.pos.y == 49)) {
+                var destRoom = new RoomPosition(25,25,creep.memory.targetRoom );
+                creep.Move(destRoom, {ignoreCreeps:false,swampCost:1,range:10});
+                u.debug(creep.pos,`builder stuck ${creep.name}`);
+                return;
             }
     
             if(creep.memory.building) {
@@ -24,6 +33,7 @@ var roleBuilder = {
                 //clear target if its not in the room we need to be in just in case we get assigned a target outside of our target area
                 if(target && target.room.name != targetRoom) {
                     delete creep.memory.targetLock;
+                    delete creep.memory.target;
                     target = false;
                 }
 
@@ -34,14 +44,23 @@ var roleBuilder = {
                         creep.memory.targetRoom = targetRoom;
                     }
                 }
+
+                if(!target && creep.memory.targetRoom && creep.room.name != creep.memory.targetRoom) {
+                    var destRoom = new RoomPosition(25,25,creep.memory.targetRoom );
+                    creep.Move(destRoom, {ignoreCreeps:false,swampCost:1,range:10});
+                }
                         
                 if(target && targetRoom && (creep.room.name == targetRoom)) {
                     var result = creep.build(target);
 
                     try {
 
+                        if(result == ERR_INVALID_TARGET) {
+                            delete creep.memory.targetLock;
+                        }
+
                         if(result == ERR_NOT_IN_RANGE) {
-                            creep.travelTo(
+                            creep.Move(
                                 new RoomPosition(
                                     target.pos.x,
                                     target.pos.y,
@@ -61,14 +80,14 @@ var roleBuilder = {
                 }
                 else if(targetRoom && (creep.room.name != targetRoom)) {
                     var destRoom = new RoomPosition(25,25,targetRoom);
-                    creep.travelTo(destRoom, {ignoreCreeps:false,swampCost:1,range:10,maxRooms:4});
+                    creep.Move(destRoom, {ignoreCreeps:false,swampCost:1,range:10,allowSK:true});
 
                     return;
                 }
                 //no targets set and we're in same room as we think we should be, so look for sites to build
                 else {
                 
-                    if(!target) {
+                    if(!target ) {
                         var buildSite = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
                     
                         if(buildSite) {
@@ -97,7 +116,15 @@ var roleBuilder = {
             }
             else { //TODO roadworkers sometimes get stuck on room edges sometimes no idea how/why, must still debug that.
 
-                var source = taskCommon.getClosestAvailableEnergy(creep);
+                var source = Game.getObjectById(creep.memory.source);
+
+                if( !source ) {
+                    source = taskCommon.getClosestAvailableEnergy(creep);
+                    if( source )
+                        creep.memory.source = source.id;
+                }
+
+
                 var collectionMethod;
 
                 if(source instanceof Structure)
@@ -110,10 +137,13 @@ var roleBuilder = {
                     if(collectionMethod == "structure")
                         result = creep.withdraw(source,RESOURCE_ENERGY);
                     else
-                        result = creep.pickup(source);
+                        result = creep.pickup(source,RESOURCE_ENERGY);
                     
                     if(result == ERR_NOT_IN_RANGE) {
-                        creep.travelTo(source,{ignoreCreeps: false,range:1,maxRooms:1,reusePath:8});
+                        creep.Move(source,{ignoreCreeps: false,range:1,maxRooms:1,reusePath:8});
+                    }
+                    if( result == OK ) {
+                        delete creep.memory.source;
                     }
                     return;
                 }
@@ -121,7 +151,7 @@ var roleBuilder = {
                     source = creep.pos.findClosestByRange(FIND_SOURCES);
                     var harvestResult = creep.harvest(source);
                     if( harvestResult == ERR_NOT_IN_RANGE) {
-                        creep.travelTo(source, {ignoreCreeps: false,range:1,maxRooms:1,reusePath:8});
+                        creep.Move(source, {ignoreCreeps: false,range:1,maxRooms:1,reusePath:8});
                     }
                     if( harvestResult == OK ) { // TODO calc harvest count to fill dont hardcode
                         if(creep.memory.hasHarvested && creep.memory.hasHarvested > 0) {
@@ -148,6 +178,10 @@ var roleBuilder = {
         var result;
         let target = Game.getObjectById(creep.memory.target);
 
+        if( target && target.room.name != creep.memory.targetRoom) {
+            delete creep.memory.target;
+        }
+
         if(target && target.structureType == STRUCTURE_RAMPART && target.hits < 300000) {
             if(creep.pos.isNearTo(target)) {
                 result = creep.repair(target);
@@ -156,7 +190,7 @@ var roleBuilder = {
                     if(result == OK)
                         return;
                 if(result == ERR_NOT_IN_RANGE)
-                    creep.travelTo(targets[0], {ignoreCreeps: false,range:3,maxRooms:1});
+                    creep.Move(targets[0], {ignoreCreeps: false,range:3,maxRooms:1});
             }
         }
 
@@ -191,7 +225,7 @@ var roleBuilder = {
         if(target) {            
             result = creep.repair(target);
             if(result == ERR_NOT_IN_RANGE) {
-                creep.travelTo(target, {ignoreCreeps: false,range:3,maxRooms:1});
+                creep.Move(target, {ignoreCreeps: false,range:3,maxRooms:1});
                 return;
             }
             //this check prevents getting stuck on room borders if not moving off them with early return
@@ -232,7 +266,7 @@ var roleBuilder = {
         if(target) {
             result = creep.repair(target);
             if(result == ERR_NOT_IN_RANGE) {
-                creep.travelTo(target, {ignoreCreeps: false,range:3,maxRooms:1});
+                creep.Move(target, {ignoreCreeps: false,range:3,maxRooms:1});
                 return;
             }
             //this check prevents getting stuck on room borders if not moving off them with early return
@@ -242,7 +276,7 @@ var roleBuilder = {
         }
         
         if(creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
-            creep.travelTo(creep.room.controller, {ignoreCreeps: false,range:1,maxRooms:1});
+            creep.Move(creep.room.controller, {ignoreCreeps: false,range:1,maxRooms:1});
         }
 
     }

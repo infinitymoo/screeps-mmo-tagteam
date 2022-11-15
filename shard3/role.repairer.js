@@ -24,7 +24,7 @@ var roleRepairer = {
             }
 
             if(creep.memory.targetRoom && creep.room.name != creep.memory.targetRoom) {
-                creep.travelTo(
+                creep.Move(
                     new RoomPosition(
                         25,
                         25,
@@ -44,7 +44,7 @@ var roleRepairer = {
                 
                 var targets = creep.room.find(FIND_STRUCTURES, {
                     filter: (structure) => {
-                        return (structure.hits < structure.hitsMax) &&
+                        return (structure.hits < ( structure.hitsMax - 2000 )) &&
                             structure.hits < 300000;
                     }});
 
@@ -68,7 +68,7 @@ var roleRepairer = {
                 if(target) {
                     result = creep.repair(target);
                     if(result == ERR_NOT_IN_RANGE) {
-                        creep.travelTo(target, {ignoreCreeps: false,range:3,maxRooms:1});
+                        creep.MoveOffRoad(target, {ignoreCreeps: false,range:3,maxRooms:1});
                         return;
                     }
                     if(result == OK)
@@ -90,7 +90,7 @@ var roleRepairer = {
                 if(target) {
                     result = creep.repair(target);
                     if(result == ERR_NOT_IN_RANGE) {
-                        creep.travelTo(target, {ignoreCreeps: false,range:3,maxRooms:1});
+                        creep.MoveOffRoad(target, {ignoreCreeps: false,range:3,maxRooms:1});
                         return;
                     }
                     //this check prevents getting stuck on room borders if not moving off them with early return
@@ -115,7 +115,7 @@ var roleRepairer = {
                 if(target) {
                     result = creep.repair(target);
                     if(result == ERR_NOT_IN_RANGE) {
-                        creep.travelTo(target, {ignoreCreeps: false,range:3,maxRooms:1});
+                        creep.MoveOffRoad(target, {ignoreCreeps: false,range:3,maxRooms:1});
                         return;
                     }
                     //this check prevents getting stuck on room borders if not moving off them with early return
@@ -124,8 +124,9 @@ var roleRepairer = {
                             return; //early return if i could do this, toa void running below code
                 }
                 
-                if(creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
-                    creep.travelTo(creep.room.controller, {ignoreCreeps: false,range:1,maxRooms:1});
+                result = creep.upgradeController(creep.room.controller);
+                if( result < 0 ) {
+                    creep.MoveOffRoad(creep.room.controller, {ignoreCreeps: false,range:1,maxRooms:1});
                 }
             }
         }
@@ -147,7 +148,7 @@ var roleRepairer = {
                     result = creep.pickup(source);
                 
                 if(result == ERR_NOT_IN_RANGE) {
-                    creep.travelTo(source,{ignoreCreeps: false,range:1,maxRooms:1,reusePath:8});
+                    creep.MoveOffRoad(source,{ignoreCreeps: false,range:1,maxRooms:1,reusePath:8});
                 }
                 return;
             }
@@ -155,7 +156,7 @@ var roleRepairer = {
                 source = creep.pos.findClosestByRange(FIND_SOURCES);
                 var harvestResult = creep.harvest(source);
                 if( harvestResult == ERR_NOT_IN_RANGE) {
-                    creep.travelTo(source, {ignoreCreeps: false,range:1,maxRooms:1,reusePath:8});
+                    creep.MoveOffRoad(source, {ignoreCreeps: false,range:1,maxRooms:1,reusePath:8});
                 }
                 if( harvestResult == OK ) { // TODO calc harvest count to fill dont hardcode
                     if(creep.memory.hasHarvested && creep.memory.hasHarvested > 0) {
@@ -170,7 +171,7 @@ var roleRepairer = {
             /*
             var sources = creep.room.find(FIND_SOURCES);
             if(creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
-                creep.travelTo(sources[0], {visualizePathStyle: {stroke: '#ffaa00'}});
+                creep.Move(sources[0], {visualizePathStyle: {stroke: '#ffaa00'}});
             }
             */
         }
@@ -210,7 +211,7 @@ var roleRepairer = {
         let result = creep.repair(targetLock);
        // u.debug(result,`buildBorders 4`);
         if(result == ERR_NOT_IN_RANGE) {
-            creep.travelTo(targetLock, {ignoreCreeps: false,range:3,maxRooms:1});
+            creep.MoveOffRoad(targetLock, {ignoreCreeps: false,range:3,maxRooms:1});
             return;
         }
 

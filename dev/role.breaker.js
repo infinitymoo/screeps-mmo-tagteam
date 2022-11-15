@@ -1,37 +1,84 @@
+var u = require('util.common');
+
 var roleBreaker = {
 
     /** @param {Creep} creep **/
     run: function(creep) {
+
         try {
-            var targetRoom = creep.memory.targetRoom;
+
+            let targetRoom = creep.memory.targetRoom;
+
+            //Get to Destination Room first
             if(targetRoom) {
-                //are we going to a remote room?
                 if(targetRoom != creep.room.name) {
-                    var result;
-                    if(controller)
-                        result = creep.travelTo(controller);
-                    else
-                        result = creep.travelTo(new RoomPosition(25,25,targetRoom),{swampCost:1,range:1});
+                    let result;
+                    result = creep.Move(new RoomPosition(25,25,targetRoom),{swampCost:1,range:10});
                     return;
                 }
             }
-            
-            //if no target was set, get a hostile structure to attack
-            if(!creep.memory.target) {
-                target = creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES);
-                if(target && target.structureType != STRUCTURE_CONTROLLER)
-                    creep.room.target = target.id;
-            }
 
-            //continue to dismantle target
-            var result = creep.dismantle(Game.getObjectById(creep.memory.target));
+            if( creep.store.getFreeCapacity() == 0 )
+                creep.drop(RESOURCE_ENERGY);
+
+            //Move to and Dismantle targets
+            let target = this.resolveDismantleTarget( creep) ;
+            let result = creep.dismantle( target );
             if(result == ERR_NOT_IN_RANGE) {
-                creep.travelTo(Game.getObjectById(creep.memory.target), {visualizePathStyle: {stroke: '#ffffff'}});
+                creep.Move(Game.getObjectById(creep.memory.target), {visualizePathStyle: {stroke: '#ffffff'}});
             }
         }
         catch (problem) {
-            console.log(`Exception thrown: role.breaker: ${problem.name}:${problem.message} ${problem.stack}`);
+
+            console.log(`Exception thrown: role.breaker: ${problem.name}:${problem.message} ${problem.stack}`);            
         }
+    },
+
+    /**
+     * Reads single or array of creep.memory.target and returns alive target
+     * @param {Creep} creep 
+     * @returns {Structure | boolean}
+     */
+    resolveDismantleTarget: function( creep ) {
+
+        let target = creep.memory.target;
+        let resolvedTarget = false;
+        
+        if( !Game.getObjectById(target) && creep.room.name == creep.memory.targetRoom ) {
+
+            let checkTarget = creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES);/*, {
+                filter: (structure) => {
+                    return (structure.structureType == STRUCTURE_WALL);
+                }});*/
+
+            if(checkTarget && checkTarget.structureType != STRUCTURE_CONTROLLER) {
+
+                creep.room.target = checkTarget.id;
+                resolvedTarget = Game.getObjectById(checkTarget.id);
+            }
+        }
+        else if( target instanceof Array ) {
+
+            for( let i = target.length - 1; i >= 0; i-- ) {
+
+                let checkTarget = target.pop(); // this doesn't modify original list of targets yet, see below.
+                let verifyTarget = Game.getObjectById( checkTarget );
+
+                if( verifyTarget ) {
+
+                    resolvedTarget = verifyTarget;
+                    break;
+                }
+                else {
+
+                    creep.memory.target.pop(); // remove saved target that is no longer valid
+                }
+            }
+        }
+        else
+            resolvedTarget = Game.getObjectById(target);         
+
+        return resolvedTarget;
     }
 };
 

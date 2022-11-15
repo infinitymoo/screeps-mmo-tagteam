@@ -14,7 +14,7 @@ var roleClaimer = {
                 }
                 // if can't see room, assume its because we're blind to it
                 else {
-                    result = creep.travelTo(new RoomPosition(25,25,targetRoom),{swampCost:1,range:1});
+                    result = creep.Move(new RoomPosition(25,25,targetRoom),{swampCost:1,range:1});
                     return;
                 }
 
@@ -22,17 +22,26 @@ var roleClaimer = {
                 if(targetRoom != creep.room.name) {
                     var result;
                     if(controller)
-                        result = creep.travelTo(controller);
+                        result = creep.Move(controller);
                     else // just in case but probably never called
-                        result = creep.travelTo(new RoomPosition(25,25,targetRoom),{ignorecreeps:true,swampCost:1,range:1});
+                        result = creep.Move(new RoomPosition(25,25,targetRoom),{ignorecreeps:true,swampCost:1,range:1});
                     return;
                 }
                 else {
                     if(controller) {
-                        var result = creep.reserveController(controller);
+                        let result;
+                        if( creep.memory.mode == 'attack' || (creep.room.controller.reservation && creep.room.controller.reservation.username == 'Invader'))
+                            result = creep.attackController(controller);
+                        else
+                            result = creep.reserveController(controller);
                         
                         if(result == ERR_NOT_IN_RANGE) {
-                            creep.travelTo(controller, {ignoreCreeps: false,range:1});
+                            creep.Move(controller, {ignoreCreeps: false,range:1});
+                        }
+                        else if( result == OK && creep.memory.mode == 'attack' ) {
+                            this.setAttackCooldown( controller );
+                            delete creep.memory.targetRoom;
+                            this.getNewTargetRoom( creep );
                         }
                     }
                     else
@@ -43,6 +52,31 @@ var roleClaimer = {
         catch (problem) {
             console.log('claimer threw error: '+problem);
         }
+    },
+
+    setAttackCooldown( controller ) {
+
+        if(!Memory.attackController) {
+            Memory.attackController = [];
+        }
+
+        if( !Memory.attackController[controller.room.name])
+            Memory.attackController[controller.room.name] = Game.time + 1000;
+    },
+
+    getNewTargetRoom( creep ) {
+
+        if(Memory.attackController && Memory.attackController.length > 0) {
+            _.forEach( Memory.attackController, (cooldown,targetRoom) => {
+                if( cooldown >= Game.time ) {
+                    creep.memory.targetRoom = targetRoom;
+                }
+            } )
+        }
+    },
+
+    getRecycled( creep ) {
+        
     }
 };
 

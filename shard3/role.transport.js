@@ -24,35 +24,39 @@ var roleTransport = {
             let result = -1000;
             let dropoffTarget = Game.getObjectById(creep.memory.dropoffTarget);
 
-            //TODO - must read this off cache instead of keeping to refresh it for every transport.
-            var targets = Game.rooms[creep.memory.homeRoom].find(FIND_STRUCTURES, {
-                filter: (structure) => {
-                    return (structure.structureType == STRUCTURE_EXTENSION ||
-                        structure.structureType == STRUCTURE_SPAWN ||
-                        structure.structureType == STRUCTURE_TOWER ||
-                        structure.structureType == STRUCTURE_CONTAINER ||
-                        structure.structureType == STRUCTURE_LINK) &&
-                        structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
-                }
-            });
-                
-            if(targets.length > 1) {
-                for(var i=1;i<targets.length;i++) {
-                    if(creep.pos.isNearTo(targets[i])) {
-                        result = creep.transfer(targets[i], RESOURCE_ENERGY);
-                        if(result == OK)
-                            return;
-                    }
-                }
-            }
 
             //for now set storage as dropoff var target (not memory target)
-            if( !dropoffTarget ) {
+            if( !dropoffTarget || dropoffTarget.store.getFreeCapacity(RESOURCE_ENERGY) == 0) {
                 if( Game.rooms[creep.memory.homeRoom].storage ) {
                     creep.memory.dropoffTarget = Game.rooms[creep.memory.homeRoom].storage.id;
                     dropoffTarget = Game.getObjectById(creep.memory.dropoffTarget);
                 }
-                else if( targets.length > 0 ) {
+                else {
+                    
+                    //TODO - must read this off cache instead of keeping to refresh it for every transport.
+                    var targets = Game.rooms[creep.memory.homeRoom].find(FIND_STRUCTURES, {
+                        filter: (structure) => {
+                            return (
+                                structure.structureType == STRUCTURE_CONTAINER ||
+                                structure.structureType == STRUCTURE_EXTENSION ||
+                                structure.structureType == STRUCTURE_SPAWN) &&
+                                structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
+                        }
+                    });
+                        
+                    // if(targets.length > 1) {
+                    //     for(var i=1;i<targets.length;i++) {
+                    //         if(creep.pos.isNearTo(targets[i])) {
+                    //             for(const resourceType in creep.store) {
+                    //                 result = creep.transfer(targets[i], resourceType);
+                    //                 // u.debug(resourceType,`stateEmptyStore in drop logic`);
+                    //                 if( result == OK )
+                    //                     break;
+                    //             }
+                    //         }
+                    //     }
+                    // }
+
                     creep.memory.dropoffTarget = targets[0].id;
                     dropoffTarget = Game.getObjectById(creep.memory.dropoffTarget);
                 }
@@ -60,19 +64,28 @@ var roleTransport = {
             
             if(dropoffTarget && dropoffTarget.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
                 if(!creep.pos.isNearTo(dropoffTarget) ) {
-                    creep.travelTo(dropoffTarget, {ignoreCreeps: false,range:1,maxRooms:3});
+                    creep.Move(dropoffTarget, {ignoreCreeps: true,range:1,priority:2,allowSK:true});
                     return;
                 }
                 else {
-                    result = creep.transfer(dropoffTarget, RESOURCE_ENERGY); //TODO have to transfer all things not just energy
+                    for(const resourceType in creep.store) {
+                        result = creep.transfer(dropoffTarget, resourceType); //TODO have to transfer all things not just energy
+                        // u.debug(resourceType,`stateEmptyStore in drop logic`);
+                        if( result == OK )
+                            break;
+                    }
+                    
                     if( result != OK ) {
                         console.log(`WARNING: transport creep ${creep.name} couldn't transfer to target while next to it`);
                     }
                     else {
+                        if( !Game.rooms[creep.memory.homeRoom].storage ) {
+                            delete creep.memory.dropoffTarget;
+                        }
                         this.checkTransition(creep);
                         //if transition successful
                         if( creep.memory.working == false )
-                            creep.travelTo(Game.getObjectById(creep.memory.target), {ignoreCreeps: false,range:1,maxRooms:3});// not same as target around here, but is actual pickup target
+                            creep.Move(Game.getObjectById(creep.memory.target), {ignoreCreeps: true,range:1,priority:2,allowSK:true});// not same as target around here, but is actual pickup target
                         return;
                     }
                 }
@@ -82,7 +95,8 @@ var roleTransport = {
             //if we get here, it means none of the early returns happened and we can't drop off energy in structures, so go to controller to feed upgraders.
             
             if( !Game.rooms[creep.memory.homeRoom].storage ) {
-                creep.travelTo(Game.rooms[creep.memory.homeRoom].controller,{range:4}); // this bugs out to other rooms for some reason if i check its own room. why though?
+
+                creep.Move(Game.rooms[creep.memory.homeRoom].controller,{ignoreCreeps: true,range:4,priority:2,allowSK:true}); // this bugs out to other rooms for some reason if i check its own room. why though?
                 if(creep.room.name == creep.memory.homeRoom) {
                     var range = creep.pos.getRangeTo(creep.room.controller.pos);
                     if(range == 4)
@@ -97,11 +111,15 @@ var roleTransport = {
 
             //if we can't get a valid target from memory, it means we have to re-assign a new one.
             try {
+                if(!target && (creep.store.getFreeCapacity() < (creep.store.getCapacity()/4))) {
+                    creep.memory.working = true;
+                }
+
                 if(!target) {
                     delete creep.memory.target; //cleanup dead or non-existing target id reference;
                     var candidateTargets = [];
                     for( var i in Game.creeps ) {
-                        if( Game.creeps[i].memory.role == "harvester" ) {
+                        if( Game.creeps[i].memory.role == "harvester" && Game.creeps[i].memory.homeRoom == creep.memory.homeRoom) {
                             let transportCoverageRetrieved = roleHarvester.getTransportCoverage(Game.creeps[i]);
                             if( (transportCoverageRetrieved > -1) && (transportCoverageRetrieved < 1) && !Game.creeps[i].spawning ) {
                                 candidateTargets.push(Game.creeps[i].id);
@@ -146,10 +164,11 @@ var roleTransport = {
                     if( source && creep.pos.isNearTo(source) && target.pos.isNearTo(source) ) {
                         result = creep.pickup(source);
                         if( result == ERR_NOT_IN_RANGE) {
-                            creep.travelTo(source, {ignoreCreeps: false,range:1,maxRooms:3});
+                            creep.Move(source, {ignoreCreeps: true,range:1,priority:2,allowSK:true});
                             return;
                         }
                         if( result == OK ) {
+                            this.checkTransition(creep);
                             return;
                         }
                     }
@@ -163,15 +182,34 @@ var roleTransport = {
                         }
 
                         //testing this to see if bug still occuring
-                        if( target instanceof Resource )
-                            result = creep.pickup(target);
-                        else if( target.store.getFreeCapacity(RESOURCE_ENERGY) == 0)
-                            result = creep.withdraw(target,RESOURCE_ENERGY);
+                        result = creep.pickup(target);
+                        if(result == OK && (creep.store.getFreeCapacity() < (creep.store.getCapacity()/4))) {
+                            creep.memory.working = true;
+                            let dropoffTarget = Game.getObjectById(creep.memory.dropoffTarget);
+                            if( dropoffTarget )
+                                creep.Move(dropoffTarget, {ignoreCreeps: true,range:1,priority:2,allowSK:true});
+                        }
 
-                        if( result == ERR_INVALID_TARGET)
-                            result = target.transfer(creep,RESOURCE_ENERGY);
+                        if( result == ERR_INVALID_TARGET) {
+                            for(const resourceType in target.store) {
+                                result = creep.withdraw(target,resourceType);
+                                // u.debug(resourceType,`stateEmptyStore in drop logic`);
+                                if( result == OK )
+                                    break;
+                            }
+                        }
+
+                        if( result == ERR_INVALID_TARGET) {
+                            if( !target.owner.username == "Malkaar" ) // don't want to withdraw every tick from harvester, only transfer when harvester full, and that gets triggered from harvester
+                                for(const resourceType in creep.store) {
+                                    result = target.transfer(creep,resourceType);
+                                    // u.debug(resourceType,`stateEmptyStore in drop logic`);
+                                    if( result == OK )
+                                        break;
+                                }
+                        }
                         if( result == ERR_NOT_IN_RANGE) {
-                            creep.travelTo(target, {ignoreCreeps: false,range:1,maxRooms:3});
+                            creep.Move(target, {ignoreCreeps: true,range:1,priority:2,allowSK:true});
                             return;
                         }
                         if( result == OK ) {
@@ -182,13 +220,20 @@ var roleTransport = {
                     }
                 }
                 else {
-                    result = creep.travelTo(target); //small swamps can screw up 2 range, so make it 4 before looking for dropped res
+
+                    let nearbyResources = this.lookForNearbyResources(creep);
+                    if( nearbyResources.length > 0 ) {
+                        this.pickupNearbyResources( creep, nearbyResources );
+                    }
+                    
+
+                    result = creep.Move(target, {ignoreCreeps: true,range:1,priority:2,allowSK:true}); //small swamps can screw up 2 range, so make it 4 before looking for dropped res
                     //console.log(`transport ${creep.name} is trying to move to remote room ${}`);
                     return;
                 }
                 //if not within 4 range of source nor within range of dropped resources, move closer to target to get ready for pickup when it does drop resources
                 // if( !targetIsDry ) {
-                //     result = creep.travelTo(target, {ignoreCreeps: false,range:1,maxRooms:1}); //small swamps can screw up 2 range, so make it 4 before looking for dropped res
+                //     result = creep.Move(target, {ignoreCreeps: false,range:1,maxRooms:1}); //small swamps can screw up 2 range, so make it 4 before looking for dropped res
                 //     return;
                 // }
                 
@@ -220,9 +265,56 @@ var roleTransport = {
             }
 
             if(!target) {
-                creep.travelTo(Game.rooms[creep.memory.homeRoom].controller);
+                creep.Move(Game.rooms[creep.memory.homeRoom].controller, {ignoreCreeps: true,range:1,priority:2,allowSK:true});
             }
         }
+    },
+
+    /**
+     * 
+     * @param {Creep} creep 
+     * @returns 
+     */
+    lookForNearbyResources: function(creep) {
+
+        let nearbyResources = [];
+
+        if( Game.time % 3 === 0) {
+
+            for(let a = -1; a < 2; a++ ) {
+                for( let b = -1; b < 2; b++) {
+
+                    let lookX = Math.min( Math.max(creep.pos.x + a,0), 49 );
+                    let lookY = Math.min( Math.max(creep.pos.y + b,0), 49 );
+                    let lookPos = new RoomPosition(
+                        lookX,
+                        lookY,
+                        creep.room.name);
+
+                    let foundResources = lookPos.lookFor(LOOK_RESOURCES);
+
+                    nearbyResources = nearbyResources.concat( foundResources );
+                }
+            }
+        }
+
+        return nearbyResources;
+    },
+
+    pickupNearbyResources: function( creep, nearbyResources ) {
+
+        _.forEach( nearbyResources, (resource) => {
+
+            if( creep.store.getFreeCapacity() == 0 )
+                return false; //breaks forEach
+
+            let result = creep.pickup( resource );
+
+            if( result == OK && (creep.store.getFreeCapacity() < (creep.store.getCapacity()/4)) )
+                creep.memory.working = true;
+            
+        } ) ;        
+
     },
 
     /**
@@ -231,7 +323,7 @@ var roleTransport = {
      */
     checkTransition: function(creep) {        
         // if empty, switch to sourcing mode
-        if(creep.memory.working && creep.store[RESOURCE_ENERGY] == 0) {
+        if(creep.memory.working && creep.store.getUsedCapacity() == 0) {
             creep.memory.working = false;
             creep.say('🧊');
         }
@@ -278,6 +370,8 @@ var roleTransport = {
         //count work modules on harvester
         let harvesterParts = _.filter(harvesterCreep.body, function(b) {return b.type == WORK});
         let transportRequirementPerTick = harvesterParts.length*2;
+        if( harvesterCreep.memory.mode == "mineral" )
+            transportRequirementPerTick = 5;
 
         //assume one step per tick and count both to and from travel. baseRange-2 because source+base positions don't count for distance,
         //transportRequirement is the amount of energy available for transport in the time a transport would take to go to base and come back

@@ -8,21 +8,26 @@ var roleUpgrader = {
             this.checkTransition(creep);
 
             if(creep.memory.working) {
-                if(creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
-                    creep.travelTo(creep.room.controller, {range:1});
+
+                // if(!creep.pos.isNearTo(creep.room.controller))
+                //     creep.Move(creep.room.controller, {range:1});
+
+                let result = creep.upgradeController(creep.room.controller);
+                if( result == ERR_NOT_IN_RANGE ) {
+                    creep.Move(creep.room.controller, {range:3});
                 }
             }
             else {
-                if(Memory.rooms[creep.room.name].links.controllerLink) {
+                if(Memory.rooms[creep.room.name] && Memory.rooms[creep.room.name].links && Memory.rooms[creep.room.name].links.controllerLink) {
                     let controllerLink = Game.getObjectById(Memory.rooms[creep.room.name].links.controllerLink);
                     var result = creep.withdraw(controllerLink,RESOURCE_ENERGY);
                     if(result == ERR_NOT_IN_RANGE) {
-                        creep.travelTo(controllerLink, {ignoreCreeps: false,range:1});
+                        creep.Move(controllerLink, {ignoreCreeps: false,range:1});
                     }
                     if(result == OK) {
                         creep.memory.working = true;
                     }
-                    return; //have to do this otherwise storage retrieval code runs
+                    //return; //have to do this otherwise storage retrieval code runs
                 }
             
                 this.getEnergy(creep);
@@ -47,13 +52,14 @@ var roleUpgrader = {
         }
         // if it has energy, go work, unless its busy filling up with harvesting
         else if( !creep.memory.working && (!creep.memory.hasHarvested || creep.memory.hasHarvested == 0) && creep.store[RESOURCE_ENERGY] != 0 ){
+            delete creep.memory.hasHarvested;
             creep.memory.working = true;
             creep.say('⚡'); 
         }
     },
 
     getEnergy(creep) {
-        var source = taskCommon.getClosestEnergy(creep);
+        var source = taskCommon.getClosestAvailableEnergy(creep);
         
         if(source) {                        
             var result;
@@ -63,7 +69,7 @@ var roleUpgrader = {
                 result = creep.pickup(source);
             
             if(result == ERR_NOT_IN_RANGE) {
-                creep.travelTo(source,{ignoreCreeps: false,range:1,maxRooms:1,reusePath:8});
+                creep.Move(source,{ignoreCreeps: false,range:1,maxRooms:1,reusePath:8});
             }
             return;
         }
@@ -72,7 +78,7 @@ var roleUpgrader = {
             if(source) {
                 var harvestResult = creep.harvest(source);
                 if( harvestResult == ERR_NOT_IN_RANGE) {
-                    creep.travelTo(source, {ignoreCreeps: false,range:1,maxRooms:1,reusePath:8});
+                    creep.Move(source, {ignoreCreeps: false,range:1,maxRooms:1,reusePath:8});
                 }
                 if( harvestResult == OK ) {
                     creep.memory.hasHarvested = creep.store.getFreeCapacity(RESOURCE_ENERGY);

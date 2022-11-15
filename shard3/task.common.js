@@ -65,7 +65,11 @@ var taskCommon = {
         }
         
         if(!cachedResourceTarget) {
-            resourceTarget = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES);
+            resourceTarget = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
+                filter: (resource) => {
+                    return resource.resourceType == RESOURCE_ENERGY;
+                }
+            });
         }
 
         //validate and return early if target assigned

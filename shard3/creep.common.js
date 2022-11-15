@@ -1,4 +1,5 @@
 var taskCommon = require('task.common');
+var u = require('util.common');
 
 var roleHarvester = require('role.harvester');
 var roleUpgrader = require('role.upgrader');
@@ -9,50 +10,98 @@ var roleAttacker = require('role.attacker');
 var roleRefiller = require('role.refiller');
 var roleClaimer = require('role.claimer');
 var roleBreaker = require('role.breaker');
+var roleSupplier = require('role.supplier');
+
+
 
 var creepCommon = {
 
+    cpuUsages: {},
+
     run() {
+
+        this.cpuUsages = {
+            upgrader:0,
+            builder:0,
+            repairer:0,
+            harvester:0,
+            transport:0,
+            supplier:0,
+            refiller:0,
+            breaker:0
+        };
+
+        u.debug( Game.cpu.getUsed(), `pre-creep cpuUsage`);
     
         for(var name in Game.creeps) {
             var creep = Game.creeps[name];
     
             try {
                 if(!creep.spawning) {
-                    if(creep.memory.fleeing) {
+                    if(creep.memory.fleeing && creep.room.name != creep.memory.homeRoom) {
                         this.fleeRoom(creep);
-                        return;
                     }
-                    // if(creep.memory.class = 'worker') {
-                    //     this.doJob(creep);                        
-                    // }
-                    if(creep.memory.role == 'upgrader') {
-                        roleUpgrader.run(creep);
+                    else if (creep.memory.mode == "recycle") {
+
+                        if(  creep.pos.x == 0 ||
+                            creep.pos.x == 49 ||
+                            creep.pos.y == 0 ||
+                            creep.pos.y == 49 ) {
+                                creep.Move(creep.room.controller.pos,{ignoreCreep:true,range:2});
+                            }
+                        else {
+
+                            if( creep.room.name != creep.memory.homeRoom )
+                                creep.Move(Game.rooms[creep.memory.homeRoom].controller.pos,{ignoreCreep:true,range:2});
+                            else {                        
+                                let closestSpawn = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, { filter: (structure) => { return structure.structureType == STRUCTURE_SPAWN }});
+                                let result = closestSpawn.recycleCreep( creep );
+                                if( result == ERR_NOT_IN_RANGE ) creep.Move( closestSpawn );
+                            }
+                        }
                     }
-                    if(creep.memory.role == 'builder') {
-                        roleBuilder.run(creep);
-                    }
-                    if(creep.memory.role == 'repairer') {
-                        roleRepairer.run(creep);
-                    }
-                
-                    if(creep.memory.role == 'harvester') {
-                        roleHarvester.run(creep);
-                    }
-                    if(creep.memory.role == 'transport') {
-                        roleTransport.run(creep);
-                    }
-                    if(creep.memory.role == 'attacker') {
-                        roleAttacker.run(creep);
-                    }
-                    if(creep.memory.role == 'refiller') {
-                        roleRefiller.run(creep);
-                    }
-                    if(creep.memory.role == 'claimer') {
-                        roleClaimer.run(creep);
-                    }
-                    if(creep.memory.role == 'breaker') {
-                        roleBreaker.run(creep);
+                    else {
+                        if(creep.memory.role == 'upgrader') {
+                            this.cpuMeasure(creep,roleUpgrader,'upgrader');
+                            //roleUpgrader.run(creep);
+                        }
+                        if(creep.memory.role == 'builder') {
+                            this.cpuMeasure(creep,roleBuilder,'builder');
+                            //roleBuilder.run(creep);
+                        }
+                        if(creep.memory.role == 'repairer') {
+                            this.cpuMeasure(creep,roleRepairer,'repairer');
+                            //roleRepairer.run(creep);
+                        }
+                    
+                        if(creep.memory.role == 'harvester') {
+                            this.cpuMeasure(creep,roleHarvester,'harvester');
+                            //roleHarvester.run(creep);
+                        }
+                        if(creep.memory.role == 'transport') {
+                            this.cpuMeasure(creep,roleTransport,'transport');
+                            // roleTransport.run(creep);
+                        }
+                        if(creep.memory.role == 'supplier') {
+                            this.cpuMeasure(creep,roleSupplier,'supplier');
+                            // roleSupplier.run(creep);
+                        }
+                        if(creep.memory.role == 'attacker') {
+                            this.cpuMeasure(creep,roleAttacker,'attacker');
+                            // roleAttacker.run(creep);
+                        }
+                        if(creep.memory.role == 'refiller') {
+                            this.cpuMeasure(creep,roleRefiller,'refiller');
+                            // roleRefiller.run(creep);
+                        }
+                        if(creep.memory.role == 'claimer') {
+                            this.cpuMeasure(creep,roleClaimer,'claimer');
+                            // roleClaimer.run(creep);
+                        }
+                        if(creep.memory.role == 'breaker') {
+                            this.cpuMeasure(creep,roleBreaker,'breaker');
+                            // roleBreaker.run(creep);
+                        }
                     }
                 }
             }
@@ -61,22 +110,74 @@ var creepCommon = {
             }
 
         }
+
+        u.debug(this.cpuUsages,'creep cpu usages');
+
+        // u.debug( Game.cpu.getUsed(), `post-creep cpuUsage`);
+
     },
 
-    fleeRoom: function(creep) {
-    
-        //if fleeing a room we were working in or in another threatened room while fleeing on the way to safety, go home
-        if( creep.room.name == creep.memory.fleeing || Memory.rooms[creep.room.name].defending) {
-            let homeController = Game.rooms[creep.memory.homeRoom].controller;
-            creep.travelTo(homeController);
+    cpuMeasure: function(creep, func, measureKey) {
+        let pre = Game.cpu.getUsed();
+        func.run(creep);
+        let post = Game.cpu.getUsed();
+        this.cpuUsages[measureKey] += (post - pre);
+    },
+
+    fleeRoom: function(creep) {    
+
+        if(!Memory.rooms[creep.memory.fleeing]) {
+            u.debug(creep.memory.fleeing,`reset fleeing 1`);
+            delete creep.memory.fleeing;
             return;
         }
-        //we don't have to go all the way home, we can chill in a safe room next door
-        else
-            creep.travelTo(creep.room.controller);
+        if( Memory.rooms[creep.memory.fleeing] && !Memory.rooms[creep.memory.fleeing].defending ) {
+            u.debug(creep.memory.fleeing,`reset fleeing 2`);
+            delete creep.memory.fleeing;
+            return;
+        }
+        if( Memory.rooms[creep.memory.fleeing] && Memory.rooms[creep.memory.fleeing].defending && Memory.intelDB && Memory.intelDB[creep.memory.fleeing] && Memory.intelDB[creep.memory.fleeing].activity.threatLevel < 1) {
+            u.debug(creep.memory.fleeing,`reset fleeing 3`);
+            delete creep.memory.fleeing;
+            return;
+        }
 
-        if( !Memory.rooms[creep.memory.fleeing].defending )
-            delete creep.memory.fleeing;        
+        if( Memory.rooms[creep.memory.fleeing] && Memory.rooms[creep.memory.fleeing].defending ) {
+            if(Game.time >= Memory.rooms[creep.memory.fleeing].defending ) {
+                u.debug(creep.memory.fleeing,`reset fleeing 4`);
+                delete creep.memory.fleeing;
+                return;
+            }
+        }
+
+        // if(  creep.pos.x == 0 ||
+        //     creep.pos.x == 49 ||
+        //     creep.pos.y == 0 ||
+        //     creep.pos.y == 49 ) {
+                creep.Move(Game.rooms[creep.memory.homeRoom].controller.pos,{ignoreCreep:true,range:2});
+        //         return;
+        //     }
+
+        // //if fleeing a room we were working in or in another threatened room while fleeing on the way to safety, go home        
+        // if( creep.room.name == creep.memory.fleeing || (Memory.rooms[creep.room.name] && Memory.rooms[creep.room.name].defending)) {
+        //     let homeController = Game.rooms[creep.memory.homeRoom].controller;
+        //     creep.Move(homeController,{range:2});
+        //     if(creep.room.name = 'E38N53')
+        //         u.debug(creep,'fleeing1');
+        //     return;
+        // }
+        // //we don't have to go all the way home, we can chill in a safe room next door
+        // else if( creep.room.controller ) {
+        //     if(creep.room.name = 'E38N53')
+        //         u.debug(creep,'fleeing 2');
+        //     creep.Move(creep.room.controller,{range:2});
+        // }
+        // else {
+        //     let homeController = Game.rooms[creep.memory.homeRoom].controller;
+        //     if(creep.room.name = 'E38N53')
+        //         u.debug(creep,'fleeing 3');
+        //     creep.Move(homeController,{range:2});
+        // }
     },
 
     /**
@@ -90,7 +191,8 @@ var creepCommon = {
             creep.say('🧊');
         }
         // if it has energy, go work, unless its busy filling up with harvesting
-        else if( !creep.memory.working && (!creep.memory.hasHarvested || creep.memory.hasHarvested == 0) && creep.store[RESOURCE_ENERGY] != 0 ){
+        else if( !creep.memory.working && (!creep.memory.hasHarvested || creep.memory.hasHarvested <= 0) && creep.store[RESOURCE_ENERGY] != 0 ) {
+            delete creep.memory.hasHarvested;
             creep.memory.working = true;
             creep.say('⚡'); 
         }
@@ -100,10 +202,6 @@ var creepCommon = {
         taskCommon.upgradeController(creep);
     }
 
-}
-
-var taskHarvest = function(creep,target) {
-    return creep.harvest(target);
 }
 
 module.exports = creepCommon;
