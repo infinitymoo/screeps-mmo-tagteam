@@ -521,6 +521,13 @@ var baseCommon = {
     garbageCollection:function() {
         try {
             let pre = Game.cpu.getUsed();
+            let memoryCreeps = Memory.creeps;
+            // _.forEach( memoryCreeps, (memoryCreep) => {
+
+            // });            
+            let post = Game.cpu.getUsed();
+            u.debug( (post - pre), `push to spawn queue cpu usages`);   
+
 
             for(var creepName in Memory.creeps) {
                 if(!Game.creeps[creepName]) {
@@ -557,9 +564,7 @@ var baseCommon = {
                     }
                 }*/
             }
-            
-            let post = Game.cpu.getUsed();
-            u.debug( (post - pre), `push to spawn queue cpu usages`);    
+ 
         }
         catch( problem ) {
             console.log(`Exception base.comon garbage collection: ${problem.name}: ${problem.message} ${problem.stack}`);

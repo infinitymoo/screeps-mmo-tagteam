@@ -63,7 +63,7 @@ var u = require('util.common');
                 filter: (structure) => {
                     return (structure.structureType == STRUCTURE_EXTENSION ||
                         structure.structureType == STRUCTURE_SPAWN ||
-                        (structure.structureType == STRUCTURE_TERMINAL && structure.store.getUsedCapacity(RESOURCE_ENERGY) < 2000) ||
+                        (structure.structureType == STRUCTURE_TERMINAL && structure.store.getUsedCapacity(RESOURCE_ENERGY) < 20000) ||
                         (structure.structureType == STRUCTURE_CONTAINER && creep.room.storage) || //only fill containers if we have a store.
                         (structure.structureType == STRUCTURE_LINK && Game.rooms[creep.room.name].memory.links && Game.rooms[creep.room.name].memory.links.baseLink == structure.id && this.linkIsValidRefillTarget(creep)) || // only target link if its baselink
                         structure.structureType == STRUCTURE_TOWER) &&
@@ -249,7 +249,7 @@ var u = require('util.common');
                 filter: (structure) => {
                     return (structure.structureType == STRUCTURE_EXTENSION ||
                         structure.structureType == STRUCTURE_SPAWN ||
-                        (structure.structureType == STRUCTURE_TERMINAL && structure.store.getUsedCapacity(RESOURCE_ENERGY) < 2000) ||
+                        (structure.structureType == STRUCTURE_TERMINAL && structure.store.getUsedCapacity(RESOURCE_ENERGY) < 20000) ||
                         (structure.structureType == STRUCTURE_CONTAINER && creep.room.storage) || //only fill containers if we have a store.
                         (structure.structureType == STRUCTURE_LINK && Game.rooms[creep.room.name].memory.links && Game.rooms[creep.room.name].memory.links.baseLink == structure.id && this.linkIsValidRefillTarget(creep)) || // only target link if its baselink
                         structure.structureType == STRUCTURE_TOWER) &&

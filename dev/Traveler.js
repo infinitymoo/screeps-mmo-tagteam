@@ -684,7 +684,6 @@ class Traveler {
             if (structure.structureType === STRUCTURE_RAMPART) {
                 if (!structure.my && !structure.isPublic) {
                     impassibleStructures.push(structure);
-                    console.log('traveller adding rampart to impassable');
                 }
             } else if (structure.structureType === STRUCTURE_ROAD) {
                 if (matrix.get(structure.pos.x, structure.pos.y) < 0xff) {

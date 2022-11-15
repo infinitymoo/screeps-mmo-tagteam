@@ -211,7 +211,7 @@ var roleAttacker = {
         // }
 
         // Melee if no healing required yet
-        let healTarget = false;this.resolveHealTarget(creep);
+        let healTarget = this.resolveHealTarget(creep);
         if( !targetCreep && !targetStructure )
             creep.Move(healTarget);
 

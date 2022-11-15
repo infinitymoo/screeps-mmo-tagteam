@@ -57,8 +57,10 @@ var roleTransport = {
                     //     }
                     // }
 
-                    creep.memory.dropoffTarget = targets[0].id;
-                    dropoffTarget = Game.getObjectById(creep.memory.dropoffTarget);
+                    if( targets && targets.length > 0 ) {
+                        creep.memory.dropoffTarget = targets[0].id;
+                        dropoffTarget = Game.getObjectById(creep.memory.dropoffTarget);
+                    }
                 }
             }
             

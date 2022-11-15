@@ -60,6 +60,7 @@ discovered remote source, check if should harvest, and kick off goal/task.
 - Don't call variables in memory directly from roles etc. but rather implement statemachine that can ensure they're initialized and valid before being accessed.
 
 = Tactical Priority =
+- Must make new spawned creep respect threatened rooms until cleared, they don't know which rooms they work in, harvesters especially.
 - Creeps get stuck on room borders when there's logic in their code that makes them NOT move current tick if they're not at target, e.g. intermittent repairing
 - Automatic handling of raiders in remote rooms and prioritizing spawning of attacker to deal with it first
 - Basic Defense of main room
