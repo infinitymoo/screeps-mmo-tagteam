@@ -1,8 +1,23 @@
-//var Traveler2 = require('Traveler2');
 var baseCommon = require('base.common');
 var creepCommon = require('creep.common');
 
+global.lastMemoryTick = undefined;
+
+function tryInitSameMemory() {
+    if (lastMemoryTick && global.LastMemory && Game.time == (lastMemoryTick + 1)) {
+        delete global.Memory
+        global.Memory = global.LastMemory
+        RawMemory._parsed = global.LastMemory
+    } else {
+        Memory;
+        global.LastMemory = RawMemory._parsed
+    }
+    lastMemoryTick = Game.time
+}
+
 module.exports.loop = function () {
+
+    tryInitSameMemory();
     
     //game loops to run
     baseCommon.run();
