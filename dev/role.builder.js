@@ -91,6 +91,7 @@ var roleBuilder = {
                         var buildSite = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
                     
                         if(buildSite) {
+                            delete creep.memory.target; //used in repair
                             targetLock = buildSite.id;
                             target = Game.getObjectById(targetLock);
                             
@@ -172,113 +173,239 @@ var roleBuilder = {
         }
     },
 
-    //TODO needs optimization badly
-    /** @param {Creep} creep **/
     doRepair: function(creep) {
-        var result;
-        let target = Game.getObjectById(creep.memory.target);
 
-        if( target && target.room.name != creep.memory.targetRoom) {
-            delete creep.memory.target;
-        }
-
-        if(target && target.structureType == STRUCTURE_RAMPART && target.hits < 300000) {
-            if(creep.pos.isNearTo(target)) {
-                result = creep.repair(target);
-                //this check prevents getting stuck on room borders if not moving off them with early return
-                if(target && target.room.name == creep.room.name)
-                    if(result == OK)
-                        return;
-                if(result == ERR_NOT_IN_RANGE)
-                    creep.Move(targets[0], {ignoreCreeps: false,range:3,maxRooms:1});
-            }
-        }
-
-        //if anything like roads or walls repairable in range on way to walking to target, repair it
-        var targets = creep.room.find(FIND_STRUCTURES, {
-            filter: (structure) => {
-                return (structure.hits < structure.hitsMax) && 
-                structure.structureType == STRUCTURE_RAMPART &&
-                    structure.hits < 300000;
-            }});
-
-        if(targets.length > 0) {
-            if(creep.pos.isNearTo(targets[0])) {
-                result = creep.repair(targets[0]);
-                //this check prevents getting stuck on room borders if not moving off them with early return
-                if(target && target.room.name == creep.room.name)
-                    if(result == OK)
-                        return;
-            }
-        }
+        //Validate
+        let repairTarget = Game.getObjectById( creep.memory.repairTarget );
         
-        if(targets.length > 0 && (!target || target.hits == target.hitsMax || target.hits > 300000)) {
-            creep.memory.target = targets[0].id;
-            target = Game.getObjectById(creep.memory.target);
+        if( !creep.memory.targetRoom ) {
+            creep.memory.targetRoom = creep.memory.homeRoom;
         }
 
-        if(target && ( target.hits >= 300000 || target.hits == target.hitsMax )) {
-            target = false;
-            delete creep.memory.target;
+        if( repairTarget && repairTarget.room.name != creep.memory.targetRoom ) {
+            delete creep.memory.repairTarget;
         }
-            
-        if(target) {            
+
+        if( !repairTarget && creep.memory.targetRoom == creep.room.name ) {
+
+            let nextTargetId = this.getRoomRepairTarget( creep, creep.room.name, creep.memory.repairTarget );
+            let repairTarget = Game.getObjectById( nextTargetId );
+            if( repairTarget ) {
+                
+                creep.memory.repairTarget = nextTargetId;
+            }
+        }
+
+        // Execute
+        let repairDone = false;
+        if( repairTarget ) {
+
+            if( (repairTarget.structureType == STRUCTURE_RAMPART || repairTarget.structureType == STRUCTURE_WALL) ) {
+
+                let targetLevel = this.calcBorderTargetLevels( repairTarget.hits );
+                if( repairTarget.hits < targetLevel ) {
+
+                    this.continueRepair( creep, repairTarget );
+                    return;
+                }
+                else {
+
+                    repairDone = true;
+                }
+            }
+            else if( repairTarget.structureType == STRUCTURE_ROAD || repairTarget.structureType == STRUCTURE_CONTAINER ) {
+
+                let lastTarget = Game.getObjectById( creep.memory.repairTarget );
+
+                if( lastTarget.hits < lastTarget.hitsMax ) {
+
+                    this.continueRepair( creep, repairTarget );
+                    return;
+                }
+                else {
+
+                    repairDone = true;
+                }
+            }
+        }
+
+        if( repairDone ) {
+            let nextTargetId = this.getRoomRepairTarget( creep, creep.room.name, creep.memory.repairTarget );
+            let repairTarget = Game.getObjectById( nextTargetId );
+            if( repairTarget ) {
+                
+                creep.memory.repairTarget = nextTargetId;
+            }
+        }
+
+
+        if( !repairTarget && creep.room.controller && creep.room.controller.owner && creep.room.controller.my ) {
+
+            if(creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
+
+                creep.Move(creep.room.controller, {ignoreCreeps: false,range:3,maxRooms:1});
+            }
+        }
+
+    },
+
+    continueRepair( creep, target ) {
+
+        let result;
+        if( creep.pos.inRangeTo( target.pos, 3 )) {
+
             result = creep.repair(target);
-            if(result == ERR_NOT_IN_RANGE) {
-                creep.Move(target, {ignoreCreeps: false,range:3,maxRooms:1});
-                return;
-            }
-            //this check prevents getting stuck on room borders if not moving off them with early return
-            if(target && target.room.name == creep.room.name)
-                if(result == OK)
-                    return; //early return if i could do this, toa void running below code
+            
+            if(result == OK)
+                return;                        
         }
-        
-        targets = creep.room.find(FIND_STRUCTURES, {
+        else {
+            
+            creep.Move(target, {ignoreCreeps: false,range:3,maxRooms:1});
+            return;
+        }
+    },
+
+    getRoomRepairTarget( creep, roomName, lastRepairTarget ) {
+
+        if( !Memory.repairLookup ) Memory.repairLookup = {};
+
+        if( !Memory.repairLookup[ roomName ] ) {
+
+            Memory.repairLookup[ roomName ] = {};
+            if( !Memory.rooms[ roomName ] )
+                Memory.rooms[ roomName ] = {};
+        }
+
+        if( !Memory.rooms[ roomName ].repairUpdated ) {
+            Memory.rooms[ roomName ].repairUpdated = Game.time;
+            this.initRoomRepairTargets( creep, roomName );
+        }
+
+        if( Memory.rooms[ roomName ].repairUpdated >= Game.time + 1500 ) {
+
+            Memory.rooms[ roomName ].repairUpdated = Game.time;
+            this.initRoomRepairTargets( creep, roomName );
+        }
+
+        let repairTarget;
+        let lastRepairTargetIndex = Memory.repairLookup[ roomName ].length;
+
+        if( _.isUndefined( lastRepairTarget ) ) {
+
+            for( let i = 0; i < Memory.repairLookup[ roomName ].length; i ++ ) {
+
+                let repairCandidate = Game.getObjectById( Memory.repairLookup[ roomName ][i] );
+                if( repairCandidate && repairCandidate.hits < repairCandidate.hitsMax ) {
+                    repairTarget = repairCandidate.id;
+                    break;
+                }
+            }
+        }
+
+        for( let i = 0; i < Memory.repairLookup[ roomName ].length; i ++ ) {
+
+            if( Memory.repairLookup[ roomName ][i] == lastRepairTarget ) {
+                lastRepairTargetIndex = i;
+                if( lastRepairTargetIndex >= Memory.repairLookup[ roomName ].length )
+                    delete creep.memory.repairTarget;
+            }
+
+            if( i >= lastRepairTargetIndex ) {
+
+                let repairCandidate = Game.getObjectById( Memory.repairLookup[ roomName ][i] );
+                if( repairCandidate && repairCandidate.hits < repairCandidate.hitsMax ) {
+                    repairTarget = repairCandidate.id;
+                    break;
+                }
+            }
+        };
+
+        return repairTarget;
+    },
+
+    initRoomRepairTargets( creep, roomName ) {
+
+        let isOwner = false;
+        if( Game.rooms[ roomName ].controller.owner && Game.rooms[ roomName ].controller.my)
+            isOwner = true;
+            
+        u.debug( roomName, `initRoomRepairTargets`);
+        //finds are expensive, so do it once and then filter out into other variables how we want to use it.
+        let repairTargets = creep.room.find( FIND_STRUCTURES, {
+
             filter: (structure) => {
-                return (structure.hits < structure.hitsMax) && 
-                    structure.hits < 300000;
-            }});
+                return structure.structureType == STRUCTURE_CONTAINER ||
+                structure.structureType == STRUCTURE_ROAD ||
+                ( (structure.structureType == STRUCTURE_RAMPART || structure.structureType == STRUCTURE_WALL) && isOwner );
+        }});
 
-        //do same as above for any non-rampart structures
-        if(targets.length > 0) {
-            if(creep.pos.isNearTo(targets[0])) {
-                result = creep.repair(targets[0]);
-                //this check prevents getting stuck on room borders if not moving off them with early return
-                if(target && target.room.name == creep.room.name)
-                    if(result == OK)
-                        return;
-            }
-        }
+        let borders = _.filter( repairTargets, (repairTarget) => {
+            return repairTarget.structureType == STRUCTURE_RAMPART || repairTarget.structureType == STRUCTURE_WALL;
+        });
 
-        // u.debug(target,`builder debug 1`);
-        // u.debug(targets.length,`builder debug 1.1`);
-        // u.debug(!target,`builder debug 1.2`);
-        // u.debug((target.hits == target.hitsMax),`builder debug 1.3`);
-        // u.debug(target.hits,`builder debug 1.4`);
-            
-        if(targets.length > 0 && (!target || target.hits == target.hitsMax || target.hits > 300000)) {
-            // u.debug(targets,`builder debug 2.1`)
-            creep.memory.target = targets[0].id;
-            target = Game.getObjectById(creep.memory.target);
-        }
-            
-        if(target) {
-            result = creep.repair(target);
-            if(result == ERR_NOT_IN_RANGE) {
-                creep.Move(target, {ignoreCreeps: false,range:3,maxRooms:1});
-                return;
-            }
-            //this check prevents getting stuck on room borders if not moving off them with early return
-            if(target && target.room.name == creep.room.name)
-                if(result == OK)
-                    return; //early return if i could do this, toa void running below code
-        }
+        let roads = _.filter( repairTargets, (repairTarget) => {
+            return repairTarget.structureType == STRUCTURE_ROAD;
+        });
+
+
+        let containers = _.filter( repairTargets, (repairTarget) => {
+            return repairTarget.structureType == STRUCTURE_CONTAINER;
+        });
+
+        let sortedBorders = _.sortBy( borders, 'hits' );
+        let sortedRoads = this.sortByRoomPosition( roads );
+        let sortedContainers = _.sortBy( containers, 'hits' );
         
-        if(creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
-            creep.Move(creep.room.controller, {ignoreCreeps: false,range:1,maxRooms:1});
-        }
+        let compiledTargets = [];
 
+        _.forEach( sortedRoads, (sortedItem) => { compiledTargets.push( sortedItem.id ) });
+        _.forEach( sortedContainers, (sortedItem) => { compiledTargets.push( sortedItem.id ) });
+        _.forEach( sortedBorders, (sortedItem) => { compiledTargets.push( sortedItem.id ) });
+
+        Memory.repairLookup[ roomName ] = compiledTargets;
+    },
+
+    //needs .pos attribute
+    sortByRoomPosition( roomObjectsArray ) {
+        roomObjectsArray.sort( function ( a, b ) {
+
+            var n = a.pos.x - b.pos.x;
+            if (n !== 0) {
+                return n;
+            }
+        
+            return a.pos.y - b.pos.y;
+        });
+
+        return roomObjectsArray;
+    },
+
+    calcBorderTargetLevels(currentLevel) {
+
+        if( currentLevel < 200000)
+            return 300000;
+
+        if( currentLevel < 800000)
+            return 1000000;
+
+        if( currentLevel < 2500000)
+            return 3000000;
+
+        if( currentLevel < 5000000)
+            return 7000000;
+            
+        if( currentLevel < 10000000)
+            return 12000000;
+
+        if( currentLevel < 18000000)
+            return 20000000;
+
+        if( currentLevel < 48000000)
+            return 50000000;
+
+        if( currentLevel < 98000000)
+            return 100000000;
     }
 };
 
