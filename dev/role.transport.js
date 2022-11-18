@@ -202,7 +202,7 @@ var roleTransport = {
                         }
 
                         if( result == ERR_INVALID_TARGET) {
-                            if( !target.owner.username == "Malkaar" ) // don't want to withdraw every tick from harvester, only transfer when harvester full, and that gets triggered from harvester
+                            if( !target.my ) // don't want to withdraw every tick from harvester, only transfer when harvester full, and that gets triggered from harvester
                                 for(const resourceType in creep.store) {
                                     result = target.transfer(creep,resourceType);
                                     // u.debug(resourceType,`stateEmptyStore in drop logic`);

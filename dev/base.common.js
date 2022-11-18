@@ -17,7 +17,7 @@ var baseCommon = {
      */
     run:function() {
 
-        u.debug( Game.cpu.getUsed(), `pre-base cpuUsage`);
+        // u.debug( Game.cpu.getUsed(), `pre-base cpuUsage`);
 
         cpuUsages = {
             garbageCollection:0,
@@ -64,7 +64,7 @@ var baseCommon = {
         post = Game.cpu.getUsed();
         cpuUsages['marketControl'] += (post - pre);
 
-        u.debug(cpuUsages,'base cpu usages');
+        // u.debug(cpuUsages,'base cpu usages');
     },
 
     /**
@@ -526,7 +526,7 @@ var baseCommon = {
 
             // });            
             let post = Game.cpu.getUsed();
-            u.debug( (post - pre), `push to spawn queue cpu usages`);   
+            //u.debug( (post - pre), `push to spawn queue cpu usages`);   
 
 
             for(var creepName in Memory.creeps) {
@@ -586,20 +586,20 @@ var baseCommon = {
 
         let thisRoom = Game.rooms['E38N53'];
         let thisTerminal = thisRoom.terminal
-        if (thisTerminal && (Game.time % 10 == 0)) {
-            if (thisTerminal.store[RESOURCE_ENERGY] >= 600 && thisTerminal.store[RESOURCE_SILICON] >= 200) {
+        if (thisTerminal && (Game.time % 40 == 0)) {
+            if (thisTerminal.store[RESOURCE_ENERGY] >= 2000 && thisTerminal.store[RESOURCE_HYDROGEN] >= 2000) {
                 var orders = Game.market.getAllOrders(
                                 order => order.resourceType == RESOURCE_SILICON &&
                                 order.type == ORDER_BUY &&
-                                order.amount >= 200 &&
-                                Game.market.calcTransactionCost(200, thisRoom.name, order.roomName) < 600
+                                order.amount >= 2000 &&
+                                Game.market.calcTransactionCost(2000, thisRoom.name, order.roomName) < 2000
                 );
 
                 orders.sort(function(a,b){return b.price - a.price;});
 
                 if(orders.length > 0)
-                if (orders[0].price >= 100) {
-                    var result = Game.market.deal(orders[0].id, 200, thisRoom.name);
+                if (orders[0].price >= 10) {
+                    var result = Game.market.deal(orders[0].id, 2000, thisRoom.name);
                     if (result == OK) {
                         //console.log('Order completed successfully');
                     }
@@ -999,7 +999,7 @@ var spawnCommon = {
 /**
  * Spawnqueue tiered arrays to make sorting and prioritization easier - must implement tick goals for replacing creep in time.
  */
-var spawnQueueStruct = {
+let spawnQueueStruct = {
     //must remain synced with prioritizeSpawn.
     
     //1 - Preservation (p)

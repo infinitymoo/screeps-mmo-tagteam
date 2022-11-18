@@ -2,7 +2,7 @@ var baseCommon = require('base.common');
 var creepCommon = require('creep.common');
 
 global.lastMemoryTick = undefined;
-​
+
 function tryInitSameMemory() {
     if (lastMemoryTick && global.LastMemory && Game.time == (lastMemoryTick + 1)) {
         delete global.Memory
@@ -56,7 +56,7 @@ module.exports.loop = function () {
  * 
  * Memory.rooms['E38N53'].spawnQueue.g.acquisition.push({memory:{class:'miner',role:'harvester',source:'5bbcaf3c9099fc012e63a5ab'}})
  * Memory.rooms['E38N53'].spawnQueue.g.reserve.push({memory:{class:'reserver',role:'claimer',targetRoom:'E36N53'}})
- * Memory.rooms['E38N53'].spawnQueue.g.logistics.push({memory:{class:'courier',role:'transport'}})
+ * Memory.rooms['E38N53'].spawnQueue.g.logistics.push({memory:{class:'courier',role:'transport',mode:'remote'}})
  * Memory.rooms['E38N53'].spawnQueue.g.logistics.push({memory:{class:'courier',role:'supplier',pickupTarget:'5ea22007922f3dc7a4b1d467',mode:'remote'}})
  * 
  * Memory.rooms['E38N53'].spawnQueue.e.baseExpansion.push({memory:{class:'specialist',role:'upgrader'}})

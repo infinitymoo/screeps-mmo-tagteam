@@ -253,7 +253,7 @@ var u = require('util.common');
                         (structure.structureType == STRUCTURE_CONTAINER && creep.room.storage) || //only fill containers if we have a store.
                         (structure.structureType == STRUCTURE_LINK && Game.rooms[creep.room.name].memory.links && Game.rooms[creep.room.name].memory.links.baseLink == structure.id && this.linkIsValidRefillTarget(creep)) || // only target link if its baselink
                         structure.structureType == STRUCTURE_TOWER) &&
-                        structure.store.getFreeCapacity(RESOURCE_ENERGY) > 5;//avoid link transfer cost leaving 1 energy gaps to call for refilling
+                        structure.store.getFreeCapacity(RESOURCE_ENERGY);//avoid link transfer cost leaving 1 energy gaps to call for refilling
                 }
             });
         }

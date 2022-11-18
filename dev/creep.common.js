@@ -111,9 +111,9 @@ var creepCommon = {
 
         }
 
-        u.debug(this.cpuUsages,'creep cpu usages');
+       u.debug(this.cpuUsages,'creep cpu usages');
 
-        // u.debug( Game.cpu.getUsed(), `post-creep cpuUsage`);
+       u.debug( Game.cpu.getUsed(), `post-creep cpuUsage`);
 
     },
 
@@ -126,58 +126,13 @@ var creepCommon = {
 
     fleeRoom: function(creep) {    
 
-        if(!Memory.rooms[creep.memory.fleeing]) {
-            u.debug(creep.memory.fleeing,`reset fleeing 1`);
-            delete creep.memory.fleeing;
-            return;
-        }
-        if( Memory.rooms[creep.memory.fleeing] && !Memory.rooms[creep.memory.fleeing].defending ) {
-            u.debug(creep.memory.fleeing,`reset fleeing 2`);
-            delete creep.memory.fleeing;
-            return;
-        }
-        if( Memory.rooms[creep.memory.fleeing] && Memory.rooms[creep.memory.fleeing].defending && Memory.intelDB && Memory.intelDB[creep.memory.fleeing] && Memory.intelDB[creep.memory.fleeing].activity.threatLevel < 1) {
-            u.debug(creep.memory.fleeing,`reset fleeing 3`);
+        if( Memory.intelDB && Memory.intelDB[creep.memory.fleeing] && ( Memory.intelDB[creep.memory.fleeing].activity.threatLevel == 0 ) ) {
+            
             delete creep.memory.fleeing;
             return;
         }
 
-        if( Memory.rooms[creep.memory.fleeing] && Memory.rooms[creep.memory.fleeing].defending ) {
-            if(Game.time >= Memory.rooms[creep.memory.fleeing].defending ) {
-                u.debug(creep.memory.fleeing,`reset fleeing 4`);
-                delete creep.memory.fleeing;
-                return;
-            }
-        }
-
-        // if(  creep.pos.x == 0 ||
-        //     creep.pos.x == 49 ||
-        //     creep.pos.y == 0 ||
-        //     creep.pos.y == 49 ) {
-                creep.Move(Game.rooms[creep.memory.homeRoom].controller.pos,{ignoreCreep:true,range:2});
-        //         return;
-        //     }
-
-        // //if fleeing a room we were working in or in another threatened room while fleeing on the way to safety, go home        
-        // if( creep.room.name == creep.memory.fleeing || (Memory.rooms[creep.room.name] && Memory.rooms[creep.room.name].defending)) {
-        //     let homeController = Game.rooms[creep.memory.homeRoom].controller;
-        //     creep.Move(homeController,{range:2});
-        //     if(creep.room.name = 'E38N53')
-        //         u.debug(creep,'fleeing1');
-        //     return;
-        // }
-        // //we don't have to go all the way home, we can chill in a safe room next door
-        // else if( creep.room.controller ) {
-        //     if(creep.room.name = 'E38N53')
-        //         u.debug(creep,'fleeing 2');
-        //     creep.Move(creep.room.controller,{range:2});
-        // }
-        // else {
-        //     let homeController = Game.rooms[creep.memory.homeRoom].controller;
-        //     if(creep.room.name = 'E38N53')
-        //         u.debug(creep,'fleeing 3');
-        //     creep.Move(homeController,{range:2});
-        // }
+        creep.Move(Game.rooms[creep.memory.homeRoom].controller.pos,{ignoreCreep:true,range:2});
     },
 
     /**

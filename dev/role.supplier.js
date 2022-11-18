@@ -124,7 +124,7 @@ var roleSupplier = {
 
                         if( result == ERR_INVALID_TARGET) {
                             for(const resourceType in target.store) {
-                                if( resourceType != RESOURCE_ENERGY && resourceType != RESOURCE_OXYGEN)
+                                if( resourceType != RESOURCE_ENERGY)
                                     result = creep.withdraw(target,resourceType);
                                 if( result == OK )
                                     break;

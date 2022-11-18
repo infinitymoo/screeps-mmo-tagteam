@@ -210,12 +210,18 @@ var roleAttacker = {
         //         creep.Move(targetCreep,{allowHostile:true,allowSK:true});
         // }
 
+
         // Melee if no healing required yet
+        let healFirst = false;
+        if( creep.memory.mode && creep.memory.mode == 'mission' ) {
+            healFirst = true;
+        }
+
         let healTarget = this.resolveHealTarget(creep);
         if( !targetCreep && !targetStructure )
             creep.Move(healTarget);
 
-        if( !healTarget ) {
+        if( !healFirst || !healTarget ) {
             if( hasAttackParts.length > 0 ) {
                 let targetLock = Game.getObjectById(creep.memory.target);
 
